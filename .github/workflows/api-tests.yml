@@ -1,4 +1,4 @@
-name: Explore With Me Tests
+name: Explore With Me API Tests
 
 on:
   workflow_dispatch:
@@ -31,3 +31,4 @@ jobs:
       stats_test_mode: ${{ inputs.stats_test_mode }}
       verbose_mode: ${{ inputs.verbose_mode }}
       print_logs: ${{ inputs.print_logs }}
+    uses: yandex-praktikum/java-explore-with-me-plus/.github/workflows/api-tests.yml@ci
