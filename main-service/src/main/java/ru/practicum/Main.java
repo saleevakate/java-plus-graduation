@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @SpringBootApplication
 public class Main {
-
+    //тестовый коммит
     @Autowired
     private StatsClient statsClient;
 
