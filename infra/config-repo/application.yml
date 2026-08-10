@@ -1,0 +1,22 @@
+spring:
+  main:
+    banner-mode: off
+    log-startup-info: false
+
+logging:
+  level:
+    ru.practicum: INFO
+    org:
+      springframework: WARN
+      hibernate: WARN
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
