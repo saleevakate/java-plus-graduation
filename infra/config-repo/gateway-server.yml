@@ -9,6 +9,7 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        # ===== Пользовательский сервис =====
         - id: user-service-admin
           uri: lb://user-service
           predicates:
@@ -22,6 +23,7 @@ spring:
                   - BAD_GATEWAY
                   - SERVICE_UNAVAILABLE
 
+        # ===== Сервис событий - Публичные =====
         - id: event-service-public-events
           uri: lb://event-service
           predicates:
@@ -46,6 +48,7 @@ spring:
           filters:
             - StripPrefix=1
 
+        # ===== Сервис событий - Административные =====
         - id: event-service-admin
           uri: lb://event-service
           predicates:
@@ -67,27 +70,33 @@ spring:
           filters:
             - StripPrefix=1
 
+        # ===== Сервис событий - Приватные =====
+        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: event-service-private
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/users/**/events/**
+            - Path=/api/v1/users/*/events/**
           filters:
             - StripPrefix=1
 
+        # ===== Сервис заявок =====
+        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/api/v1/users/**/requests/**
+            - Path=/api/v1/users/*/requests/**
           filters:
             - StripPrefix=1
 
+        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: request-service-events
           uri: lb://request-service
           predicates:
-            - Path=/api/v1/users/**/events/**/requests/**
+            - Path=/api/v1/users/*/events/*/requests/**
           filters:
             - StripPrefix=1
 
+        # ===== Сервис статистики =====
         - id: stats-service
           uri: lb://stats-server
           predicates:
@@ -95,6 +104,7 @@ spring:
           filters:
             - StripPrefix=1
 
+      # CORS настройки
       globalcors:
         add-to-simple-url-handler-mapping: true
         cors-configurations:

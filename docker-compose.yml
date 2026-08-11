@@ -122,7 +122,7 @@ services:
       - POSTGRES_PASSWORD=localadmin
       - TZ=UTC
     volumes:
-      - ./core/main-service/src/main/resources:/docker-entrypoint-initdb.d
+      - ./db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
       interval: 5s

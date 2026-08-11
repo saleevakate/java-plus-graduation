@@ -1,4 +1,4 @@
-package ru.practicum.service;
+package ru.practicum.service.event;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,12 +55,10 @@ public class EventRequestServiceImpl implements EventRequestService {
             throw new NotFoundException("Некоторые запросы не были найдены.");
         }
 
-        // Проверяем, что все запросы относятся к событию
         if (requests.stream().anyMatch(request -> !request.getEventId().equals(eventId))) {
             throw new ConflictException("Запрос не относится к указанному событию.");
         }
 
-        // Проверяем, что все запросы в статусе PENDING
         if (requests.stream().anyMatch(request ->
                 !ParticipationStatus.PENDING.name().equals(request.getStatus()))) {
             throw new ConflictException("Запрос должен иметь статус PENDING.");
@@ -104,7 +102,6 @@ public class EventRequestServiceImpl implements EventRequestService {
             confirmed.add(request);
         }
 
-        // Если лимит достигнут, отклоняем все остальные PENDING заявки
         if (limit != 0 && confirmedCount >= limit) {
             List<Request> others = requestRepository.findAllByEventId(eventId).stream()
                     .filter(req -> ParticipationStatus.PENDING.name().equals(req.getStatus()))
