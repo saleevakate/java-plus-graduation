@@ -1,6 +1,6 @@
 package ru.practicum.mapper;
 
-import ru.practicum.EndpointHit;
+import ru.practicum.dto.stats.EndpointHit;
 import ru.practicum.model.EndpointHitEntity;
 
 import java.time.LocalDateTime;
@@ -32,4 +32,3 @@ public final class StatsMapper {
         );
     }
 }
-

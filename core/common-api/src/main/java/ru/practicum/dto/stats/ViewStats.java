@@ -1,4 +1,4 @@
-package ru.practicum;
+package ru.practicum.dto.stats;
 
 public record ViewStats(
         String app,
