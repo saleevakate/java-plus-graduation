@@ -1,0 +1,26 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:postgresql://ewm-db:5432/ewm-db
+    username: localAdmin
+    password: localadmin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.cloud: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

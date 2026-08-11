@@ -36,4 +36,5 @@ public record UpdateEventAdminRequest(
 
         @Size(min = 3, max = 120, message = "Заголовок должен содержать от 3 до 120 символов")
         String title
-) {}
+) {
+}

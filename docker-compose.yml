@@ -1,4 +1,7 @@
 services:
+  # ============================================
+  # 1. DISCOVERY SERVER (Eureka)
+  # ============================================
   discovery-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: discovery-server
@@ -16,6 +19,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================
+  # 2. CONFIG SERVER
+  # ============================================
   config-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: config-server
@@ -39,6 +45,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================
+  # 3. GATEWAY SERVER
+  # ============================================
   gateway-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: gateway-server
@@ -57,24 +66,9 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  ewm-db:
-    image: postgres:16.1
-    container_name: ewm-db
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=ewm-db
-      - POSTGRES_USER=localAdmin
-      - POSTGRES_PASSWORD=localadmin
-      - TZ=UTC
-    volumes:
-      - ./core/main-service/src/main/resources:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
+  # ============================================
+  # 4. STATS DATABASE
+  # ============================================
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -93,6 +87,9 @@ services:
       timeout: 3s
       retries: 5
 
+  # ============================================
+  # 5. STATS SERVER
+  # ============================================
   stats-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: stats-server
@@ -111,13 +108,79 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  ewm-service:
+  # ============================================
+  # 6. EWM DATABASE (основная БД)
+  # ============================================
+  ewm-db:
+    image: postgres:16.1
+    container_name: ewm-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=ewm-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./core/main-service/src/main/resources:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ============================================
+  # 7. USER SERVICE
+  # ============================================
+  user-service:
     image: eclipse-temurin:21-jdk-alpine
-    container_name: ewm-service
+    container_name: user-service
     working_dir: /app
     volumes:
-      - ./core/main-service/target:/app
-    command: java -jar main-service-0.0.1-SNAPSHOT.jar
+      - ./user-service/target:/app
+    command: java -jar user-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      ewm-db:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  # ============================================
+  # 8. REQUEST SERVICE
+  # ============================================
+  request-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: request-service
+    working_dir: /app
+    volumes:
+      - ./request-service/target:/app
+    command: java -jar request-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      ewm-db:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  # ============================================
+  # 9. EVENT SERVICE
+  # ============================================
+  event-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: event-service
+    working_dir: /app
+    volumes:
+      - ./event-service/target:/app
+    command: java -jar event-service-0.0.1-SNAPSHOT.jar
     depends_on:
       discovery-server:
         condition: service_healthy

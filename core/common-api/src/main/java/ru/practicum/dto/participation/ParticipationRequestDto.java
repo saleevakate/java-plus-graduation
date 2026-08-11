@@ -19,4 +19,5 @@ public record ParticipationRequestDto(
         Long requester,
 
         ParticipationStatus status
-) {}
+) {
+}

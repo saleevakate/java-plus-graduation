@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"ru.practicum.client", "ru.practicum.user", "ru.practicum.event"})
 public class RequestServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(RequestServiceApplication.class, args);

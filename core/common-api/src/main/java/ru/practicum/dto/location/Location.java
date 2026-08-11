@@ -11,4 +11,5 @@ public record Location(
         @DecimalMin(value = "-180.0", message = "Долгота должна быть в диапазоне от -180 до 180")
         @DecimalMax(value = "180.0", message = "Долгота должна быть в диапазоне от -180 до 180")
         Float lon
-) {}
+) {
+}

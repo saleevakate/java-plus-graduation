@@ -14,4 +14,5 @@ public record UpdateCompilationRequest(
 
         @UniqueElements(message = "Список событий не должен содержать дубликатов")
         List<@Positive(message = "ID события должен быть положительным числом") Long> events
-) {}
+) {
+}

@@ -8,11 +8,15 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.EndpointHit;
+import ru.practicum.StatsClient;
+import ru.practicum.ViewStats;
 import ru.practicum.client.request.RequestServiceClient;
 import ru.practicum.client.user.UserServiceClient;
 import ru.practicum.dto.event.*;
@@ -54,23 +58,173 @@ public class EventServiceImpl implements EventService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final LocalDateTime STATS_RANGE_START = LocalDateTime.of(2000, 1, 1, 0, 0, 0);
-    private static final String EVENT_URI_PREFIX = "/events/";
+    private static final String APP_NAME = "ewm-event-service";
 
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
     private final UserServiceClient userServiceClient;
     private final RequestServiceClient requestServiceClient;
+    private final StatsClient statsClient;
 
-    // Пока заглушка для StatsClient
+    private Event getEventByIdOrThrow(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не существует"));
+    }
+
+    private Event getOwnedEventOrThrow(Long userId, Long eventId) {
+        return eventRepository.findByIdAndInitiatorId(eventId, userId)
+                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
+    }
+
+    private void validateUser(Long userId) {
+        try {
+            Boolean exists = userServiceClient.userExists(userId);
+            if (!exists) {
+                throw new NotFoundException("Пользователь с id=" + userId + " не найден");
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при проверке пользователя в user-service: {}", e.getMessage());
+            throw new UserServiceUnavailableException("Сервис пользователей временно недоступен");
+        }
+    }
+
+    private String getUserName(Long userId) {
+        try {
+            return userServiceClient.getUserById(userId).name();
+        } catch (Exception e) {
+            log.error("Ошибка при получении пользователя из user-service: {}", e.getMessage());
+            return "Unknown User " + userId;
+        }
+    }
+
+    private Map<Long, String> getUserNames(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return userServiceClient.getUsersByIds(userIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            ru.practicum.dto.user.UserDto::id,
+                            ru.practicum.dto.user.UserDto::name,
+                            (existing, replacement) -> existing
+                    ));
+        } catch (Exception e) {
+            log.error("Ошибка при получении пользователей из user-service: {}", e.getMessage());
+            return userIds.stream()
+                    .collect(Collectors.toMap(id -> id, id -> "Unknown User " + id));
+        }
+    }
+
+    private String getCategoryName(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .map(Category::getName)
+                .orElse("Unknown");
+    }
+
+    private Map<Long, String> getCategoryNames(List<Long> categoryIds) {
+        return categoryRepository.findAllById(categoryIds).stream()
+                .collect(Collectors.toMap(Category::getId, Category::getName));
+    }
+
+    private void saveHit(HttpServletRequest request) {
+        saveHit(request, request.getRequestURI());
+    }
+
+    private void saveHit(HttpServletRequest request, String uri) {
+        try {
+            String ip = request.getRemoteAddr();
+            String timestamp = LocalDateTime.now().format(DATE_FORMATTER);
+            EndpointHit hit = new EndpointHit(null, APP_NAME, uri, ip, timestamp);
+            statsClient.saveHit(hit);
+            log.debug("Hit saved: {}", hit);
+        } catch (Exception e) {
+            log.error("Failed to save hit: {}", e.getMessage());
+        }
+    }
+
+    private boolean sortByViews(PublicEventsFilter filter) {
+        return filter.sort() != null && filter.sort().equals(EventSort.VIEWS);
+    }
+
+    private Predicate predicateFromFilter(PublicEventsFilter filter) {
+        QEvent event = QEvent.event;
+        BooleanBuilder builder = new BooleanBuilder();
+        builder.and(event.state.eq(String.valueOf(EventState.PUBLISHED)));
+
+        if (filter.text() != null && !filter.text().isBlank()) {
+            String searchText = "%" + filter.getNormalizedText() + "%";
+            BooleanExpression textCondition = Expressions.stringTemplate(
+                            "LOWER({0})", event.annotation
+                    ).like(searchText)
+                    .or(Expressions.stringTemplate(
+                            "LOWER({0})", event.description
+                    ).like(searchText));
+            builder.and(textCondition);
+        }
+
+        if (filter.categories() != null && !filter.categories().isEmpty()) {
+            builder.and(event.categoryId.in(filter.categories()));
+        }
+
+        if (filter.paid() != null) {
+            builder.and(event.paid.eq(filter.paid()));
+        }
+
+        LocalDateTime startDate = filter.getRangeStartDateTime();
+        LocalDateTime endDate = filter.getRangeEndDateTime();
+
+        if (startDate != null && endDate != null) {
+            if (endDate.isBefore(startDate)) {
+                throw new ValidationException("Начало события не может быть позже завершения события");
+            }
+            builder.and(event.eventDate.between(startDate, endDate));
+        } else if (startDate != null) {
+            builder.and(event.eventDate.after(startDate));
+        } else if (endDate != null) {
+            builder.and(event.eventDate.before(endDate));
+        }
+
+        if (filter.onlyAvailable()) {
+            builder.and(event.confirmedRequests.lt(event.participantLimit));
+        }
+
+        return builder.getValue();
+    }
+
     private Map<Long, Long> getViewsFromStats(List<Long> eventIds) {
-        // TODO: реализовать через StatsClient
-        return new HashMap<>();
+        if (eventIds == null || eventIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        try {
+            List<String> uris = eventIds.stream()
+                    .map(id -> "/events/" + id)
+                    .collect(Collectors.toList());
+
+            String start = STATS_RANGE_START.format(DATE_FORMATTER);
+            String end = LocalDateTime.now().format(DATE_FORMATTER);
+
+            List<ViewStats> stats = statsClient.getHits(start, end, uris, true);
+
+            return stats.stream()
+                    .collect(Collectors.toMap(
+                            stat -> Long.parseLong(stat.uri().replace("/events/", "")),
+                            ViewStats::hits
+                    ));
+        } catch (Exception e) {
+            log.error("Failed to get views from stats service: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 
     @Override
-    public EventFullDto getEventById(Long eventId) {
+    public EventFullDto getEventById(Long eventId, HttpServletRequest request) {
         log.info("Получение события по id: {}", eventId);
+
+        saveHit(request);
+
         Event event = getEventByIdOrThrow(eventId);
         if (!event.getState().equals(EventState.PUBLISHED.name())) {
             throw new NotFoundException("Событие не опубликовано");
@@ -197,8 +351,11 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, String app, String uri, String ip, String timestamp) {
+    public List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, HttpServletRequest request) {
         log.info("Поиск опубликованных событий с фильтром: {}", filter);
+
+        saveHit(request);
+
         Predicate predicate = predicateFromFilter(filter);
 
         List<Event> events = queryFactory
@@ -208,8 +365,9 @@ public class EventServiceImpl implements EventService {
 
         List<Long> eventIds = events.stream().map(Event::getId).toList();
 
-        // Сохраняем хиты для статистики
-        // TODO: реализовать через StatsClient
+        for (Long eventId : eventIds) {
+            saveHit(request, "/events/" + eventId);
+        }
 
         Map<Long, Long> views = getViewsFromStats(eventIds);
         Map<Long, String> userNames = getUserNames(events.stream().map(Event::getInitiatorId).toList());
@@ -228,56 +386,6 @@ public class EventServiceImpl implements EventService {
                 .skip(filter.from())
                 .limit(filter.size())
                 .toList();
-    }
-
-    private Predicate predicateFromFilter(PublicEventsFilter filter) {
-        QEvent event = QEvent.event;
-        BooleanBuilder builder = new BooleanBuilder();
-        builder.and(event.state.eq(String.valueOf(EventState.PUBLISHED)));
-
-        if (filter.text() != null && !filter.text().isBlank()) {
-            String searchText = "%" + filter.getNormalizedText() + "%";
-            BooleanExpression textCondition = Expressions.stringTemplate(
-                            "LOWER({0})", event.annotation
-                    ).like(searchText)
-                    .or(Expressions.stringTemplate(
-                            "LOWER({0})", event.description
-                    ).like(searchText));
-            builder.and(textCondition);
-        }
-
-        if (filter.categories() != null && !filter.categories().isEmpty()) {
-            builder.and(event.categoryId.in(filter.categories()));
-        }
-
-        if (filter.paid() != null) {
-            builder.and(event.paid.eq(filter.paid()));
-        }
-
-        LocalDateTime startDate = filter.getRangeStartDateTime();
-        LocalDateTime endDate = filter.getRangeEndDateTime();
-
-        if (startDate != null && endDate != null) {
-            if (endDate.isBefore(startDate)) {
-                throw new ValidationException("Начало события не может быть позже завершения события");
-            }
-            builder.and(event.eventDate.between(startDate, endDate));
-        } else if (startDate != null) {
-            builder.and(event.eventDate.after(startDate));
-        } else if (endDate != null) {
-            builder.and(event.eventDate.before(endDate));
-        }
-
-        if (filter.onlyAvailable()) {
-            // TODO: проверить лимиты через request-service
-            builder.and(event.confirmedRequests.lt(event.participantLimit));
-        }
-
-        return builder.getValue();
-    }
-
-    private boolean sortByViews(PublicEventsFilter filter) {
-        return filter.sort() != null && filter.sort().equals(EventSort.VIEWS);
     }
 
     @Override
@@ -399,64 +507,35 @@ public class EventServiceImpl implements EventService {
                 .orElse(0);
     }
 
-    private Event getEventByIdOrThrow(Long eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не существует"));
-    }
+    @Override
+    public List<EventShortDto> getEventsByIds(List<Long> eventIds) {
+        log.info("Получение событий по списку ids: {}", eventIds);
 
-    private Event getOwnedEventOrThrow(Long userId, Long eventId) {
-        return eventRepository.findByIdAndInitiatorId(eventId, userId)
-                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
-    }
-
-    private void validateUser(Long userId) {
-        try {
-            Boolean exists = userServiceClient.userExists(userId);
-            if (!exists) {
-                throw new NotFoundException("Пользователь с id=" + userId + " не найден");
-            }
-        } catch (Exception e) {
-            log.error("Ошибка при проверке пользователя в user-service: {}", e.getMessage());
-            throw new UserServiceUnavailableException("Сервис пользователей временно недоступен");
+        if (eventIds == null || eventIds.isEmpty()) {
+            return List.of();
         }
-    }
+        List<Event> events = eventRepository.findAllById(eventIds);
 
-    private String getUserName(Long userId) {
-        try {
-            return userServiceClient.getUserById(userId).name();
-        } catch (Exception e) {
-            log.error("Ошибка при получении пользователя из user-service: {}", e.getMessage());
-            return "Unknown User " + userId;
+        if (events.isEmpty()) {
+            return List.of();
         }
-    }
 
-    private Map<Long, String> getUserNames(List<Long> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
-            return new HashMap<>();
-        }
-        try {
-            return userServiceClient.getUsersByIds(userIds)
-                    .stream()
-                    .collect(Collectors.toMap(
-                            ru.practicum.dto.user.UserDto::id,
-                            ru.practicum.dto.user.UserDto::name,
-                            (existing, replacement) -> existing
-                    ));
-        } catch (Exception e) {
-            log.error("Ошибка при получении пользователей из user-service: {}", e.getMessage());
-            return userIds.stream()
-                    .collect(Collectors.toMap(id -> id, id -> "Unknown User " + id));
-        }
-    }
+        Map<Long, Long> viewsMap = getViewsFromStats(eventIds);
+        Map<Long, String> userNames = getUserNames(events.stream()
+                .map(Event::getInitiatorId)
+                .collect(Collectors.toList()));
 
-    private String getCategoryName(Long categoryId) {
-        return categoryRepository.findById(categoryId)
-                .map(Category::getName)
-                .orElse("Unknown");
-    }
+        Map<Long, String> categoryNames = getCategoryNames(events.stream()
+                .map(Event::getCategoryId)
+                .collect(Collectors.toList()));
 
-    private Map<Long, String> getCategoryNames(List<Long> categoryIds) {
-        return categoryRepository.findAllById(categoryIds).stream()
-                .collect(Collectors.toMap(Category::getId, Category::getName));
+        return events.stream()
+                .map(event -> eventMapper.toShortDto(
+                        event,
+                        viewsMap.getOrDefault(event.getId(), 0L),
+                        userNames.get(event.getInitiatorId()),
+                        categoryNames.get(event.getCategoryId())
+                ))
+                .collect(Collectors.toList());
     }
 }

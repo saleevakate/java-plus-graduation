@@ -1,5 +1,6 @@
 package ru.practicum.controller.event;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,22 +24,18 @@ public class PublicEventController {
     private final EventService eventService;
 
     @GetMapping
-    public ResponseEntity<List<EventShortDto>> getEventsByFilter(@ModelAttribute @Valid PublicEventsFilter filter) {
+    public ResponseEntity<List<EventShortDto>> getEventsByFilter(
+            @ModelAttribute @Valid PublicEventsFilter filter,
+            HttpServletRequest request) {
         log.info("GET /events");
-        // TODO: получить app, uri, ip, timestamp из запроса
-        String app = "ewm-event-service";
-        String uri = "/events";
-        String ip = "127.0.0.1";
-        String timestamp = java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        );
-
-        return ResponseEntity.ok(eventService.getPublishedEvents(filter, app, uri, ip, timestamp));
+        return ResponseEntity.ok(eventService.getPublishedEvents(filter, request));
     }
 
     @GetMapping("/{eventId}")
-    public ResponseEntity<EventFullDto> getEventById(@PathVariable Long eventId) {
+    public ResponseEntity<EventFullDto> getEventById(
+            @PathVariable Long eventId,
+            HttpServletRequest request) {
         log.info("GET /events/{}", eventId);
-        return ResponseEntity.ok(eventService.getEventById(eventId));
+        return ResponseEntity.ok(eventService.getEventById(eventId, request));
     }
 }

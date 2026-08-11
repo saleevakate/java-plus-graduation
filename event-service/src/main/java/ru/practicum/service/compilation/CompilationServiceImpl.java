@@ -128,24 +128,37 @@ public class CompilationServiceImpl implements CompilationService {
         if (eventIds == null || eventIds.isEmpty()) {
             return new HashMap<>();
         }
+        Map<Long, EventShortDto> result = new HashMap<>();
 
-        // TODO: реализовать получение EventShortDto через eventService
-        // Пока заглушка
-        return eventIds.stream()
-                .collect(Collectors.toMap(
-                        id -> id,
-                        id -> new EventShortDto(
-                                "Аннотация для события " + id,
-                                null,
-                                0L,
-                                null,
-                                id,
-                                null,
-                                false,
-                                "Событие " + id,
-                                0L
-                        )
-                ));
+        try {
+            List<EventShortDto> events = eventService.getEventsByIds(eventIds);
+            result = events.stream()
+                    .collect(Collectors.toMap(
+                            EventShortDto::id,
+                            event -> event,
+                            (existing, replacement) -> existing
+                    ));
+            log.debug("Получено {} событий из {}", result.size(), eventIds.size());
+        } catch (Exception e) {
+            log.error("Ошибка при получении событий из event-service: {}", e.getMessage());
+            result = eventIds.stream()
+                    .collect(Collectors.toMap(
+                            id -> id,
+                            id -> new EventShortDto(
+                                    "Событие временно недоступно",
+                                    null,
+                                    0L,
+                                    null,
+                                    id,
+                                    null,
+                                    false,
+                                    "Событие " + id,
+                                    0L
+                            )
+                    ));
+        }
+
+        return result;
     }
 
     private void validateEventsExist(List<Long> eventIds) {

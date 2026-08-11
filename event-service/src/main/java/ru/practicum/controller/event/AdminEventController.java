@@ -36,4 +36,30 @@ public class AdminEventController {
         log.info("PATCH /admin/events/{}", eventId);
         return ResponseEntity.ok(eventService.updateAdminEvent(eventId, request));
     }
+
+    @GetMapping("/exists/{eventId}")
+    public ResponseEntity<Boolean> eventExists(@PathVariable Long eventId) {
+        log.info("GET /admin/events/exists/{}", eventId);
+        return ResponseEntity.ok(eventService.eventExists(eventId));
+    }
+
+    @GetMapping("/owner/{userId}/{eventId}")
+    public ResponseEntity<Boolean> isEventOwner(
+            @PathVariable Long userId,
+            @PathVariable Long eventId) {
+        log.info("GET /admin/events/owner/{}/{}", userId, eventId);
+        return ResponseEntity.ok(eventService.isEventOwner(userId, eventId));
+    }
+
+    @GetMapping("/published/{eventId}")
+    public ResponseEntity<Boolean> isEventPublished(@PathVariable Long eventId) {
+        log.info("GET /admin/events/published/{}", eventId);
+        return ResponseEntity.ok(eventService.isEventPublished(eventId));
+    }
+
+    @GetMapping("/limit/{eventId}")
+    public ResponseEntity<Integer> getParticipantLimit(@PathVariable Long eventId) {
+        log.info("GET /admin/events/limit/{}", eventId);
+        return ResponseEntity.ok(eventService.getParticipantLimit(eventId));
+    }
 }

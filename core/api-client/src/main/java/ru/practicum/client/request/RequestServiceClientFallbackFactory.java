@@ -18,37 +18,37 @@ public class RequestServiceClientFallbackFactory implements FallbackFactory<Requ
         return new RequestServiceClient() {
             @Override
             public List<ParticipationRequestDto> getUserRequests(Long userId) {
-                log.error("Request service unavailable for getUserRequests: {}", userId, cause);
+                log.error("Сервис запросов недоступен для getUserRequests: {}", userId, cause);
                 return List.of();
             }
 
             @Override
             public ParticipationRequestDto addParticipationRequest(Long userId, Long eventId) {
-                log.error("Request service unavailable for addParticipationRequest: userId={}, eventId={}", userId, eventId, cause);
-                throw new RuntimeException("Request service temporarily unavailable");
+                log.error("Сервис запросов недоступен для addParticipationRequest: userId={}, eventId={}", userId, eventId, cause);
+                throw new RuntimeException("Сервис запросов временно недоступен");
             }
 
             @Override
             public ParticipationRequestDto cancelRequest(Long userId, Long requestId) {
-                log.error("Request service unavailable for cancelRequest: userId={}, requestId={}", userId, requestId, cause);
-                throw new RuntimeException("Request service temporarily unavailable");
+                log.error("Сервис запросов недоступен для cancelRequest: userId={}, requestId={}", userId, requestId, cause);
+                throw new RuntimeException("Сервис запросов временно недоступен");
             }
 
             @Override
             public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
-                log.error("Request service unavailable for getEventRequests: userId={}, eventId={}", userId, eventId, cause);
+                log.error("Сервис запросов недоступен для getEventRequests: userId={}, eventId={}", userId, eventId, cause);
                 return List.of();
             }
 
             @Override
             public EventRequestStatusUpdateResult updateRequestStatuses(Long userId, Long eventId, EventRequestStatusUpdateRequest request) {
-                log.error("Request service unavailable for updateRequestStatuses: userId={}, eventId={}", userId, eventId, cause);
-                throw new RuntimeException("Request service temporarily unavailable");
+                log.error("Сервис запросов недоступен для updateRequestStatuses: userId={}, eventId={}", userId, eventId, cause);
+                throw new RuntimeException("Сервис запросов временно недоступен");
             }
 
             @Override
             public Integer getConfirmedRequestsCount(Long eventId) {
-                log.error("Request service unavailable for getConfirmedRequestsCount: {}", eventId, cause);
+                log.error("Сервис запросов недоступен для getConfirmedRequestsCount: {}", eventId, cause);
                 return 0;
             }
         };

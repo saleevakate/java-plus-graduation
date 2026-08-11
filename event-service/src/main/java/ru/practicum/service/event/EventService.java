@@ -1,5 +1,6 @@
 package ru.practicum.service.event;
 
+import jakarta.servlet.http.HttpServletRequest;
 import ru.practicum.dto.event.*;
 import ru.practicum.dto.event.param_objects.AdminEventsFilter;
 import ru.practicum.dto.event.param_objects.PublicEventsFilter;
@@ -8,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 public interface EventService {
-    EventFullDto getEventById(Long eventId);
+
+    EventFullDto getEventById(Long eventId, HttpServletRequest request);
 
     List<EventShortDto> getUserEvents(Long userId, int from, int size);
 
@@ -18,7 +20,7 @@ public interface EventService {
 
     EventFullDto updateUserEvent(Long userId, Long eventId, UpdateEventUserRequest updateRequest);
 
-    List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, String app, String uri, String ip, String timestamp);
+    List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, HttpServletRequest request);
 
     List<EventFullDto> getAdminEvents(AdminEventsFilter filter);
 
@@ -33,4 +35,6 @@ public interface EventService {
     boolean isEventPublished(Long eventId);
 
     int getParticipantLimit(Long eventId);
+
+    List<EventShortDto> getEventsByIds(List<Long> eventIds);
 }

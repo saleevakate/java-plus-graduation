@@ -13,4 +13,5 @@ public record EventRequestStatusUpdateRequest(
 
         @NotNull(message = "Статус не должен быть null")
         RequestStatusAction status
-) {}
+) {
+}

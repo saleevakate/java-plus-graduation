@@ -16,4 +16,5 @@ public record CompilationDto(
         String title,
 
         List<EventShortDto> events
-) {}
+) {
+}

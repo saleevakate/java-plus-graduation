@@ -61,4 +61,5 @@ public record EventFullDto(
 
         @PositiveOrZero(message = "Количество просмотров не может быть отрицательным")
         Long views
-) {}
+) {
+}

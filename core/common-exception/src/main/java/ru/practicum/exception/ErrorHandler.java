@@ -23,7 +23,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFoundException(final NotFoundException e) {
-        log.error("Resource not found: {}", e.getMessage(), e);
+        log.error("Ресурс не найден: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ApiError(
@@ -36,7 +36,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiError> handleConflictException(final ConflictException e) {
-        log.error("Conflict: {}", e.getMessage(), e);
+        log.error("Конфликт: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(new ApiError(
@@ -49,7 +49,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiError> handleValidationException(final ValidationException e) {
-        log.error("Validation error: {}", e.getMessage(), e);
+        log.error("Ошибка валидации: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(
@@ -66,7 +66,7 @@ public class ErrorHandler {
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(", "));
 
-        log.error("Validation failed: {}", errorMessage, e);
+        log.error("Ошибка валидации: {}", errorMessage, e);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(
@@ -83,7 +83,7 @@ public class ErrorHandler {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
 
-        log.error("Constraint violation: {}", errorMessage, e);
+        log.error("Нарушение ограничений: {}", errorMessage, e);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(
@@ -96,7 +96,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolationException(final DataIntegrityViolationException e) {
-        log.error("Data integrity violation: {}", e.getMessage(), e);
+        log.error("Нарушение целостности данных: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(new ApiError(
@@ -109,7 +109,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiError> handleMissingParam(final MissingServletRequestParameterException e) {
-        log.error("Missing parameter: {}", e.getMessage(), e);
+        log.error("Отсутствует параметр запроса: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(
@@ -122,7 +122,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleMethodArgumentTypeMismatch(final MethodArgumentTypeMismatchException e) {
-        log.error("Type mismatch: {}", e.getMessage(), e);
+        log.error("Несоответствие типа: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiError(
@@ -135,7 +135,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ApiError> handleUserServiceUnavailable(final UserServiceUnavailableException e) {
-        log.error("User service unavailable: {}", e.getMessage(), e);
+        log.error("Сервис пользователей недоступен: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiError(
@@ -148,7 +148,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(EventServiceUnavailableException.class)
     public ResponseEntity<ApiError> handleEventServiceUnavailable(final EventServiceUnavailableException e) {
-        log.error("Event service unavailable: {}", e.getMessage(), e);
+        log.error("Сервис событий недоступен: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiError(
@@ -161,7 +161,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(RequestServiceUnavailableException.class)
     public ResponseEntity<ApiError> handleRequestServiceUnavailable(final RequestServiceUnavailableException e) {
-        log.error("Request service unavailable: {}", e.getMessage(), e);
+        log.error("Сервис заявок недоступен: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiError(
@@ -174,7 +174,7 @@ public class ErrorHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleException(final Exception e) {
-        log.error("Unexpected error: {}", e.getMessage(), e);
+        log.error("Непредвиденная ошибка: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(

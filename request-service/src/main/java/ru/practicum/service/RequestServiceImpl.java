@@ -4,10 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.client.event.EventServiceClient;
+import ru.practicum.client.user.UserServiceClient;
 import ru.practicum.dto.participation.ParticipationRequestDto;
 import ru.practicum.dto.participation.ParticipationStatus;
 import ru.practicum.exception.ConflictException;
+import ru.practicum.exception.EventServiceUnavailableException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.UserServiceUnavailableException;
 import ru.practicum.mapper.RequestMapper;
 import ru.practicum.model.Request;
 import ru.practicum.repository.RequestRepository;
@@ -22,31 +26,52 @@ public class RequestServiceImpl implements RequestService {
 
     private final RequestRepository requestRepository;
     private final RequestMapper requestMapper;
+    private final UserServiceClient userServiceClient;
+    private final EventServiceClient eventServiceClient;
 
-    // Пока заглушки, потом заменим на Feign
     private boolean userExists(Long userId) {
-        // TODO: заменить на вызов user-service через Feign
-        return true;
+        try {
+            return userServiceClient.userExists(userId);
+        } catch (Exception e) {
+            log.error("Ошибка при проверке пользователя в user-service: {}", e.getMessage());
+            throw new UserServiceUnavailableException("Сервис пользователей временно недоступен");
+        }
     }
 
     private boolean eventExists(Long eventId) {
-        // TODO: заменить на вызов event-service через Feign
-        return true;
+        try {
+            return eventServiceClient.eventExists(eventId);
+        } catch (Exception e) {
+            log.error("Ошибка при проверке события в event-service: {}", e.getMessage());
+            throw new EventServiceUnavailableException("Сервис событий временно недоступен");
+        }
     }
 
     private boolean isEventOwner(Long userId, Long eventId) {
-        // TODO: заменить на вызов event-service через Feign
-        return false;
+        try {
+            return eventServiceClient.isEventOwner(userId, eventId);
+        } catch (Exception e) {
+            log.error("Ошибка при проверке владельца события в event-service: {}", e.getMessage());
+            return false;
+        }
     }
 
     private boolean isEventPublished(Long eventId) {
-        // TODO: заменить на вызов event-service через Feign
-        return true;
+        try {
+            return eventServiceClient.isEventPublished(eventId);
+        } catch (Exception e) {
+            log.error("Ошибка при проверке публикации события в event-service: {}", e.getMessage());
+            return false;
+        }
     }
 
     private int getParticipantLimit(Long eventId) {
-        // TODO: заменить на вызов event-service через Feign
-        return 0;
+        try {
+            return eventServiceClient.getParticipantLimit(eventId);
+        } catch (Exception e) {
+            log.error("Ошибка при получении лимита участников из event-service: {}", e.getMessage());
+            return 0;
+        }
     }
 
     @Override

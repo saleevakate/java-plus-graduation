@@ -17,37 +17,37 @@ public class UserServiceClientFallbackFactory implements FallbackFactory<UserSer
         return new UserServiceClient() {
             @Override
             public UserDto getUserById(Long userId) {
-                log.error("User service unavailable for getUserById: {}", userId, cause);
-                throw new RuntimeException("User service temporarily unavailable");
+                log.error("Сервис пользователей недоступен для getUserById: {}", userId, cause);
+                throw new RuntimeException("Сервис пользователей временно недоступен");
             }
 
             @Override
             public Boolean userExists(Long userId) {
-                log.error("User service unavailable for userExists: {}", userId, cause);
+                log.error("Сервис пользователей недоступен для userExists: {}", userId, cause);
                 return false;
             }
 
             @Override
             public List<UserDto> getUsersByIds(List<Long> userIds) {
-                log.error("User service unavailable for getUsersByIds: {}", userIds, cause);
-                throw new RuntimeException("User service temporarily unavailable");
+                log.error("Сервис пользователей недоступен для getUsersByIds: {}", userIds, cause);
+                throw new RuntimeException("Сервис пользователей временно недоступен");
             }
 
             @Override
             public List<UserDto> getUsers(List<Long> ids, Integer from, Integer size) {
-                log.error("User service unavailable for getUsers", cause);
+                log.error("Сервис пользователей недоступен для getUsers", cause);
                 return List.of();
             }
 
             @Override
             public UserDto createUser(NewUserRequest request) {
-                log.error("User service unavailable for createUser", cause);
-                throw new RuntimeException("User service temporarily unavailable");
+                log.error("Сервис пользователей недоступен для createUser", cause);
+                throw new RuntimeException("Сервис пользователей временно недоступен");
             }
 
             @Override
             public void deleteUser(Long userId) {
-                log.error("User service unavailable for deleteUser: {}", userId, cause);
+                log.error("Сервис пользователей недоступен для deleteUser: {}", userId, cause);
             }
         };
     }
