@@ -15,11 +15,9 @@
         <module>stats-service</module>
         <module>infra</module>
         <module>core</module>
-        <module>core/main-service/event-management</module>
-        <module>core/main-service/user-management</module>
-        <module>core/main-service/request-management</module>
-        <module>core/main-service/common-api</module>
-        <module>core/main-service/common-exception</module>
+        <module>user-service</module>
+        <module>request-service</module>
+        <module>event-service</module>
     </modules>
 
     <groupId>ru.practicum</groupId>
@@ -31,6 +29,11 @@
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-cloud.version>2023.0.3</spring-cloud.version>
+
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok.version>1.18.42</lombok.version>
+        <querydsl.version>5.1.0</querydsl.version>
+        <postgresql.version>42.7.11</postgresql.version>
 
         <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
         <checkstyle.version>10.20.1</checkstyle.version>
@@ -55,34 +58,34 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.11</version>
+                <version>${postgresql.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-                <version>1.18.42</version>
+                <version>${lombok.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct</artifactId>
-                <version>1.6.3</version>
+                <version>${mapstruct.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
-                <version>1.6.3</version>
+                <version>${mapstruct.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.querydsl</groupId>
                 <artifactId>querydsl-jpa</artifactId>
-                <version>5.1.0</version>
+                <version>${querydsl.version}</version>
                 <classifier>jakarta</classifier>
             </dependency>
             <dependency>
                 <groupId>com.querydsl</groupId>
                 <artifactId>querydsl-apt</artifactId>
-                <version>5.1.0</version>
+                <version>${querydsl.version}</version>
                 <classifier>jakarta</classifier>
             </dependency>
         </dependencies>
@@ -99,7 +102,7 @@
                         <dependency>
                             <groupId>com.querydsl</groupId>
                             <artifactId>querydsl-apt</artifactId>
-                            <version>5.1.0</version>
+                            <version>${querydsl.version}</version>
                             <classifier>jakarta</classifier>
                         </dependency>
                         <dependency>
@@ -238,12 +241,12 @@
                             <path>
                                 <groupId>org.projectlombok</groupId>
                                 <artifactId>lombok</artifactId>
-                                <version>1.18.42</version>
+                                <version>${lombok.version}</version>
                             </path>
                             <path>
                                 <groupId>org.mapstruct</groupId>
                                 <artifactId>mapstruct-processor</artifactId>
-                                <version>1.6.3</version>
+                                <version>${mapstruct.version}</version>
                             </path>
                             <path>
                                 <groupId>org.projectlombok</groupId>
