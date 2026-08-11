@@ -15,6 +15,11 @@
         <module>stats-service</module>
         <module>infra</module>
         <module>core</module>
+        <module>core/main-service/event-management</module>
+        <module>core/main-service/user-management</module>
+        <module>core/main-service/request-management</module>
+        <module>core/main-service/common-api</module>
+        <module>core/main-service/common-exception</module>
     </modules>
 
     <groupId>ru.practicum</groupId>

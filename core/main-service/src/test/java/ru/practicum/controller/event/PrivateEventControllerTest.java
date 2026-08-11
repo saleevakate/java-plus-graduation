@@ -11,7 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.StatsClient;
 import ru.practicum.dto.category.CategoryDto;
-import ru.practicum.dto.event.*;
 import ru.practicum.dto.location.Location;
 import ru.practicum.dto.user.UserShortDto;
 import ru.practicum.exception.ConflictException;
