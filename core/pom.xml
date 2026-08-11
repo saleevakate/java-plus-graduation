@@ -12,4 +12,9 @@
     <artifactId>core</artifactId>
     <packaging>pom</packaging>
 
+    <modules>
+        <module>api-client</module>
+        <module>common-api</module>
+        <module>common-exception</module>
+    </modules>
 </project>

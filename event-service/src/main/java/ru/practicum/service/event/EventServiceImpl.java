@@ -13,15 +13,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.client.RequestServiceClient;
-import ru.practicum.client.UserServiceClient;
+import ru.practicum.client.request.RequestServiceClient;
+import ru.practicum.client.user.UserServiceClient;
 import ru.practicum.dto.event.*;
 import ru.practicum.dto.event.param_objects.AdminEventsFilter;
 import ru.practicum.dto.event.param_objects.PublicEventsFilter;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.UserServiceUnavailableException;
 import ru.practicum.exception.ValidationException;
-import ru.practicum.mapper.event.EventMapper;
+import ru.practicum.mapper.EventMapper;
+import ru.practicum.model.Category;
 import ru.practicum.model.Event;
 import ru.practicum.model.QEvent;
 import ru.practicum.repository.CategoryRepository;
@@ -408,30 +410,53 @@ public class EventServiceImpl implements EventService {
     }
 
     private void validateUser(Long userId) {
-        // TODO: реализовать через Feign вызов user-service
-        if (userId == null || userId <= 0) {
-            throw new ValidationException("Некорректный ID пользователя");
+        try {
+            Boolean exists = userServiceClient.userExists(userId);
+            if (!exists) {
+                throw new NotFoundException("Пользователь с id=" + userId + " не найден");
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при проверке пользователя в user-service: {}", e.getMessage());
+            throw new UserServiceUnavailableException("Сервис пользователей временно недоступен");
         }
     }
 
     private String getUserName(Long userId) {
-        // TODO: реализовать через Feign вызов user-service
-        return "User " + userId;
+        try {
+            return userServiceClient.getUserById(userId).name();
+        } catch (Exception e) {
+            log.error("Ошибка при получении пользователя из user-service: {}", e.getMessage());
+            return "Unknown User " + userId;
+        }
     }
 
     private Map<Long, String> getUserNames(List<Long> userIds) {
-        // TODO: реализовать через Feign вызов user-service
-        return userIds.stream().collect(Collectors.toMap(id -> id, id -> "User " + id));
+        if (userIds == null || userIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return userServiceClient.getUsersByIds(userIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            ru.practicum.dto.user.UserDto::id,
+                            ru.practicum.dto.user.UserDto::name,
+                            (existing, replacement) -> existing
+                    ));
+        } catch (Exception e) {
+            log.error("Ошибка при получении пользователей из user-service: {}", e.getMessage());
+            return userIds.stream()
+                    .collect(Collectors.toMap(id -> id, id -> "Unknown User " + id));
+        }
     }
 
     private String getCategoryName(Long categoryId) {
         return categoryRepository.findById(categoryId)
-                .map(category -> category.getName())
+                .map(Category::getName)
                 .orElse("Unknown");
     }
 
     private Map<Long, String> getCategoryNames(List<Long> categoryIds) {
         return categoryRepository.findAllById(categoryIds).stream()
-                .collect(Collectors.toMap(category -> category.getId(), category -> category.getName()));
+                .collect(Collectors.toMap(Category::getId, Category::getName));
     }
 }

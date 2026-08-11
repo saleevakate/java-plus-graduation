@@ -7,10 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import ru.practicum.dto.NewUserRequest;
+import ru.practicum.dto.user.NewUserRequest;
 
-import ru.practicum.dto.UserDto;
-import ru.practicum.dto.param_objects.AdminUserFilter;
+import ru.practicum.dto.user.UserDto;
+import ru.practicum.dto.user.param_objects.AdminUserFilter;
 import ru.practicum.service.UserService;
 
 import java.util.List;

@@ -9,7 +9,7 @@ import ru.practicum.dto.compilation.NewCompilationDto;
 import ru.practicum.dto.compilation.UpdateCompilationRequest;
 import ru.practicum.dto.event.EventShortDto;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.mapper.compilation.CompilationMapper;
+import ru.practicum.mapper.CompilationMapper;
 import ru.practicum.model.Compilation;
 import ru.practicum.repository.CompilationRepository;
 import ru.practicum.repository.EventRepository;
@@ -62,7 +62,7 @@ public class CompilationServiceImpl implements CompilationService {
         Compilation compilation = compilationRepository.findById(compId)
                 .orElseThrow(() -> new NotFoundException("Подборка с указанным ID не найдена"));
 
-        List<EventShortDto> eventDtos = getEventShortDtos(compilation.getEventIds());
+        List<EventShortDto> eventDtos = getEventShortDtos(compilation.getEventIds()).values().stream().toList();
 
         return compilationMapper.toDto(compilation, eventDtos);
     }
@@ -82,7 +82,7 @@ public class CompilationServiceImpl implements CompilationService {
         Compilation saved = compilationRepository.save(compilation);
         log.info("Подборка создана с id: {}", saved.getId());
 
-        List<EventShortDto> eventDtos = getEventShortDtos(saved.getEventIds());
+        List<EventShortDto> eventDtos = getEventShortDtos(saved.getEventIds()).values().stream().toList();
         return compilationMapper.toDto(saved, eventDtos);
     }
 
@@ -109,7 +109,7 @@ public class CompilationServiceImpl implements CompilationService {
         Compilation updated = compilationRepository.save(compilation);
         log.info("Подборка обновлена id: {}", updated.getId());
 
-        List<EventShortDto> eventDtos = getEventShortDtos(updated.getEventIds());
+        List<EventShortDto> eventDtos = getEventShortDtos(updated.getEventIds()).values().stream().toList();
         return compilationMapper.toDto(updated, eventDtos);
     }
 
@@ -124,26 +124,28 @@ public class CompilationServiceImpl implements CompilationService {
         log.info("Подборка удалена");
     }
 
-    private List<EventShortDto> getEventShortDtos(List<Long> eventIds) {
+    private Map<Long, EventShortDto> getEventShortDtos(List<Long> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
-            return List.of();
+            return new HashMap<>();
         }
 
         // TODO: реализовать получение EventShortDto через eventService
         // Пока заглушка
         return eventIds.stream()
-                .map(id -> new EventShortDto(
-                        "Аннотация для события " + id,
-                        null,
-                        0L,
-                        null,
-                        id,
-                        null,
-                        false,
-                        "Событие " + id,
-                        0L
-                ))
-                .collect(Collectors.toList());
+                .collect(Collectors.toMap(
+                        id -> id,
+                        id -> new EventShortDto(
+                                "Аннотация для события " + id,
+                                null,
+                                0L,
+                                null,
+                                id,
+                                null,
+                                false,
+                                "Событие " + id,
+                                0L
+                        )
+                ));
     }
 
     private void validateEventsExist(List<Long> eventIds) {

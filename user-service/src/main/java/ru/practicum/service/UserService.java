@@ -1,8 +1,8 @@
 package ru.practicum.service;
 
-import ru.practicum.dto.NewUserRequest;
-import ru.practicum.dto.UserDto;
-import ru.practicum.dto.param_objects.AdminUserFilter;
+import ru.practicum.dto.user.NewUserRequest;
+import ru.practicum.dto.user.UserDto;
+import ru.practicum.dto.user.param_objects.AdminUserFilter;
 
 import java.util.List;
 
