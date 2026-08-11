@@ -1,15 +1,60 @@
 services:
-  ewm-service:
-    build: ./main-service
-    container_name: ewm-service
+  discovery-server:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: discovery-server
+    working_dir: /app
+    volumes:
+      - ./infra/discovery-server/target:/app
+    command: java -jar discovery-server-0.0.1-SNAPSHOT.jar
+    ports:
+      - "8761:8761"
+    environment:
+      - TZ=UTC
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  config-server:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: config-server
+    working_dir: /app
+    volumes:
+      - ./infra/config-server/target:/app
+      - ./infra/config-repo:/config-repo
+    command: java -jar config-server-0.0.1-SNAPSHOT.jar
+    ports:
+      - "8888:8888"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/config-repo
+      - TZ=UTC
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gateway-server:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: gateway-server
+    working_dir: /app
+    volumes:
+      - ./infra/gateway-server/target:/app
+    command: java -jar gateway-server-0.0.1-SNAPSHOT.jar
     ports:
       - "8080:8080"
     depends_on:
-      - ewm-db
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm-db
-      - SPRING_DATASOURCE_USERNAME=localAdmin
-      - SPRING_DATASOURCE_PASSWORD=localadmin
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
   ewm-db:
@@ -23,20 +68,12 @@ services:
       - POSTGRES_PASSWORD=localadmin
       - TZ=UTC
     volumes:
-      - ./main-service/src/main/resources:/docker-entrypoint-initdb.d
-
-  stats-server:
-    build: ./stats-service/stats-server
-    container_name: stats-server
-    ports:
-      - "9090:9090"
-    depends_on:
-      - stats-db
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats-db
-      - SPRING_DATASOURCE_USERNAME=localAdmin
-      - SPRING_DATASOURCE_PASSWORD=localadmin
-      - TZ=UTC
+      - ./core/main-service/src/main/resources:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   stats-db:
     image: postgres:16.1
@@ -50,3 +87,46 @@ services:
       - TZ=UTC
     volumes:
       - ./stats-service/stats-server/src/main/resources:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d stats-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  stats-server:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: stats-server
+    working_dir: /app
+    volumes:
+      - ./stats-service/stats-server/target:/app
+    command: java -jar stats-server-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      stats-db:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  ewm-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: ewm-service
+    working_dir: /app
+    volumes:
+      - ./core/main-service/target:/app
+    command: java -jar main-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      ewm-db:
+        condition: service_healthy
+      stats-server:
+        condition: service_started
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC

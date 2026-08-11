@@ -1,0 +1,14 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:postgresql://stats-db:5432/stats-db
+    username: localAdmin
+    password: localadmin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
