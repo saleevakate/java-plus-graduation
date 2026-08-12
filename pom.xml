@@ -18,6 +18,7 @@
         <module>user-service</module>
         <module>request-service</module>
         <module>event-service</module>
+        <module>location-service</module>
     </modules>
 
     <groupId>ru.practicum</groupId>
@@ -54,7 +55,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>

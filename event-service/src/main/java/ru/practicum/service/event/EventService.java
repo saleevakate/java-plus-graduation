@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import ru.practicum.dto.event.*;
 import ru.practicum.dto.event.param_objects.AdminEventsFilter;
 import ru.practicum.dto.event.param_objects.PublicEventsFilter;
+import ru.practicum.dto.location.PrivateEventsFilter;
 
 import java.util.List;
 import java.util.Map;
@@ -37,4 +38,10 @@ public interface EventService {
     int getParticipantLimit(Long eventId);
 
     List<EventShortDto> getEventsByIds(List<Long> eventIds);
+
+    //методы дополнительной функциональности
+    EventFullDto getEventWithDistance(Long eventId, Double lat, Double lon);
+
+    List<EventShortDto> getUserEventsByCoordinates(Long userId, PrivateEventsFilter filter,
+                                                   Integer page, Integer size);
 }

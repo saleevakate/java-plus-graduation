@@ -6,14 +6,12 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
       routes:
-        # ===== Пользовательский сервис =====
         - id: user-service-admin
           uri: lb://user-service
           predicates:
-            - Path=/api/v1/admin/users/**
+            - Path=/api/admin/users/**
           filters:
             - StripPrefix=1
             - name: Retry
@@ -22,20 +20,38 @@ spring:
                 statuses:
                   - BAD_GATEWAY
                   - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
+                methods:
+                  - POST
+                  - GET
+                  - DELETE
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
 
-        # ===== Сервис событий - Публичные =====
         - id: event-service-public-events
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/events/**
+            - Path=/api/events/**
             - Method=GET
           filters:
             - StripPrefix=1
+            - name: Retry
+              args:
+                retries: 2
+                statuses:
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                methods:
+                  - GET
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
 
         - id: event-service-public-categories
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/categories/**
+            - Path=/api/categories/**
             - Method=GET
           filters:
             - StripPrefix=1
@@ -43,73 +59,79 @@ spring:
         - id: event-service-public-compilations
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/compilations/**
+            - Path=/api/compilations/**
             - Method=GET
           filters:
             - StripPrefix=1
 
-        # ===== Сервис событий - Административные =====
         - id: event-service-admin
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/admin/events/**
+            - Path=/api/admin/events/**
           filters:
             - StripPrefix=1
 
         - id: event-service-admin-categories
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/admin/categories/**
+            - Path=/api/admin/categories/**
           filters:
             - StripPrefix=1
 
         - id: event-service-admin-compilations
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/admin/compilations/**
+            - Path=/api/admin/compilations/**
           filters:
             - StripPrefix=1
 
-        # ===== Сервис событий - Приватные =====
-        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: event-service-private
           uri: lb://event-service
           predicates:
-            - Path=/api/v1/users/*/events/**
+            - Path=/api/users/*/events/**
           filters:
             - StripPrefix=1
 
-        # ===== Сервис заявок =====
-        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: request-service
           uri: lb://request-service
           predicates:
-            - Path=/api/v1/users/*/requests/**
+            - Path=/api/users/*/requests/**
           filters:
             - StripPrefix=1
 
-        # ✅ ИСПРАВЛЕНО: используем только один ** в конце
         - id: request-service-events
           uri: lb://request-service
           predicates:
-            - Path=/api/v1/users/*/events/*/requests/**
+            - Path=/api/users/*/events/*/requests/**
           filters:
             - StripPrefix=1
 
-        # ===== Сервис статистики =====
         - id: stats-service
           uri: lb://stats-server
           predicates:
-            - Path=/api/v1/stats/**
+            - Path=/api/stats/**
           filters:
             - StripPrefix=1
 
-      # CORS настройки
+        - id: location-service
+          uri: lb://location-service
+          predicates:
+            - Path=/api/location/**
+          filters:
+            - StripPrefix=1
+
+        - id: test-cleanup
+          uri: lb://test-cleanup
+          predicates:
+            - Path=/api/test-cleanup/**
+          filters:
+            - StripPrefix=1
+
       globalcors:
         add-to-simple-url-handler-mapping: true
         cors-configurations:
           '[/**]':
-            allowed-origins:
+            allowed-origin-patterns:
               - "*"
             allowed-methods:
               - GET
@@ -122,6 +144,15 @@ spring:
               - "*"
             allow-credentials: true
             max-age: 3600
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:

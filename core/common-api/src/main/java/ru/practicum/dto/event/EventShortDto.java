@@ -37,6 +37,8 @@ public record EventShortDto(
         String title,
 
         @PositiveOrZero(message = "Количество просмотров не может быть отрицательным")
-        Long views
+        Long views,
+
+        Double distance
 ) {
 }

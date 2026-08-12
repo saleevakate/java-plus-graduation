@@ -153,7 +153,8 @@ public class CompilationServiceImpl implements CompilationService {
                                     null,
                                     false,
                                     "Событие " + id,
-                                    0L
+                                    0L,
+                                    0.0
                             )
                     ));
         }

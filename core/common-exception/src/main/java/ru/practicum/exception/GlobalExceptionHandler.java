@@ -1,5 +1,6 @@
 package ru.practicum.exception;
 
+import feign.FeignException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -11,15 +12,17 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
-public class ErrorHandler {
+public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFoundException(final NotFoundException e) {
@@ -30,7 +33,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Запрашиваемый ресурс не найден",
-                        "404"
+                        HttpStatus.NOT_FOUND.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -43,7 +47,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Конфликт данных",
-                        "409"
+                        HttpStatus.CONFLICT.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -56,7 +61,22 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Ошибка валидации данных",
-                        "400"
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
+                ));
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiError> handleHandlerMethodValidationException(final HandlerMethodValidationException e) {
+        log.error("Ошибка валидации параметров запроса: {}", e.getMessage(), e);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiError(
+                        getStackTrace(e),
+                        "Невалидные параметры запроса",
+                        "Ошибка валидации данных",
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -73,7 +93,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         errorMessage,
                         "Ошибка валидации данных",
-                        "400"
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -90,7 +111,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         errorMessage,
                         "Ошибка валидации данных",
-                        "400"
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -103,7 +125,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Нарушение целостности данных",
-                        "409"
+                        HttpStatus.CONFLICT.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -116,7 +139,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Отсутствует обязательный параметр запроса",
-                        "400"
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -129,46 +153,47 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Некорректный тип параметра",
-                        "400"
+                        HttpStatus.BAD_REQUEST.name(),
+                        LocalDateTime.now()
                 ));
     }
 
-    @ExceptionHandler(UserServiceUnavailableException.class)
-    public ResponseEntity<ApiError> handleUserServiceUnavailable(final UserServiceUnavailableException e) {
-        log.error("Сервис пользователей недоступен: {}", e.getMessage(), e);
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ApiError> handleFeignException(FeignException e) {
+        log.error("Ошибка при вызове внешнего сервиса: {}", e.getMessage(), e);
+
+        if (e.status() == 400) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiError(
+                            getStackTrace(e),
+                            e.getMessage(),
+                            "Ошибка валидации данных в сервисе событий",
+                            HttpStatus.BAD_REQUEST.name(),
+                            LocalDateTime.now()
+                    ));
+        }
+
+        if (e.status() == 404) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(new ApiError(
+                            getStackTrace(e),
+                            e.getMessage(),
+                            "Ресурс не найден в сервисе событий",
+                            HttpStatus.NOT_FOUND.name(),
+                            LocalDateTime.now()
+                    ));
+        }
+
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiError(
                         getStackTrace(e),
-                        e.getMessage(),
-                        "Сервис пользователей временно недоступен",
-                        "503"
-                ));
-    }
-
-    @ExceptionHandler(EventServiceUnavailableException.class)
-    public ResponseEntity<ApiError> handleEventServiceUnavailable(final EventServiceUnavailableException e) {
-        log.error("Сервис событий недоступен: {}", e.getMessage(), e);
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ApiError(
-                        getStackTrace(e),
-                        e.getMessage(),
                         "Сервис событий временно недоступен",
-                        "503"
-                ));
-    }
-
-    @ExceptionHandler(RequestServiceUnavailableException.class)
-    public ResponseEntity<ApiError> handleRequestServiceUnavailable(final RequestServiceUnavailableException e) {
-        log.error("Сервис заявок недоступен: {}", e.getMessage(), e);
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ApiError(
-                        getStackTrace(e),
-                        e.getMessage(),
-                        "Сервис заявок временно недоступен",
-                        "503"
+                        "Внешний сервис временно недоступен",
+                        HttpStatus.SERVICE_UNAVAILABLE.name(),
+                        LocalDateTime.now()
                 ));
     }
 
@@ -181,7 +206,8 @@ public class ErrorHandler {
                         getStackTrace(e),
                         e.getMessage(),
                         "Непредвиденная ошибка сервера",
-                        "500"
+                        HttpStatus.INTERNAL_SERVER_ERROR.name(),
+                        LocalDateTime.now()
                 ));
     }
 

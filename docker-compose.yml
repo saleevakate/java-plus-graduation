@@ -1,7 +1,4 @@
 services:
-  # ============================================
-  # 1. DISCOVERY SERVER (Eureka)
-  # ============================================
   discovery-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: discovery-server
@@ -14,14 +11,11 @@ services:
     environment:
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8761/actuator/health"]
+      test: [ "CMD", "wget", "--spider", "http://localhost:8761/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ============================================
-  # 2. CONFIG SERVER
-  # ============================================
   config-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: config-server
@@ -40,14 +34,11 @@ services:
       - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/config-repo
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8888/actuator/health"]
+      test: [ "CMD", "wget", "--spider", "http://localhost:8888/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ============================================
-  # 3. GATEWAY SERVER
-  # ============================================
   gateway-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: gateway-server
@@ -66,9 +57,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  # ============================================
-  # 4. STATS DATABASE
-  # ============================================
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -82,14 +70,11 @@ services:
     volumes:
       - ./stats-service/stats-server/src/main/resources:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U localAdmin -d stats-db"]
+      test: [ "CMD-SHELL", "pg_isready -U localAdmin -d stats-db" ]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  # ============================================
-  # 5. STATS SERVER
-  # ============================================
   stats-server:
     image: eclipse-temurin:21-jdk-alpine
     container_name: stats-server
@@ -108,9 +93,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  # ============================================
-  # 6. EWM DATABASE (основная БД)
-  # ============================================
   ewm-db:
     image: postgres:16.1
     container_name: ewm-db
@@ -124,14 +106,11 @@ services:
     volumes:
       - ./db:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
+      test: [ "CMD-SHELL", "pg_isready -U localAdmin -d ewm-db" ]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  # ============================================
-  # 7. USER SERVICE
-  # ============================================
   user-service:
     image: eclipse-temurin:21-jdk-alpine
     container_name: user-service
@@ -150,9 +129,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  # ============================================
-  # 8. REQUEST SERVICE
-  # ============================================
   request-service:
     image: eclipse-temurin:21-jdk-alpine
     container_name: request-service
@@ -171,9 +147,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  # ============================================
-  # 9. EVENT SERVICE
-  # ============================================
   event-service:
     image: eclipse-temurin:21-jdk-alpine
     container_name: event-service
@@ -193,3 +166,39 @@ services:
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
+
+  location-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: location-service
+    working_dir: /app
+    volumes:
+      - ./location-service/target:/app
+    command: java -jar location-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  test-cleanup:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: test-cleanup
+    working_dir: /app
+    volumes:
+      - ./core/test-cleanup/target:/app
+    command: java -jar test-cleanup-0.0.1-SNAPSHOT.jar
+    ports:
+      - "9099:9099"
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      ewm-db:
+        condition: service_healthy
+    environment:
+      - TZ=UTC
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888

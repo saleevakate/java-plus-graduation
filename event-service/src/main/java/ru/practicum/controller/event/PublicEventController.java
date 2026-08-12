@@ -2,6 +2,10 @@ package ru.practicum.controller.event;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -37,5 +41,14 @@ public class PublicEventController {
             HttpServletRequest request) {
         log.info("GET /events/{}", eventId);
         return ResponseEntity.ok(eventService.getEventById(eventId, request));
+    }
+
+    @GetMapping("/{eventId}/distance")
+    public ResponseEntity<EventFullDto> getEventWithDistance(
+            @Positive @PathVariable Long eventId,
+            @RequestParam @NotNull @Min(-90) @Max(90) Double lat,
+            @RequestParam @NotNull @Min(-180) @Max(180) Double lon) {
+        log.info("GET /events/{}/distance?lat={}&lon={}", eventId, lat, lon);
+        return ResponseEntity.ok(eventService.getEventWithDistance(eventId, lat, lon));
     }
 }

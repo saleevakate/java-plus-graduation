@@ -12,16 +12,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatsClient;
-import ru.practicum.client.request.RequestServiceClient;
 import ru.practicum.client.user.UserServiceClient;
+import ru.practicum.dto.category.CategoryDto;
 import ru.practicum.dto.event.*;
 import ru.practicum.dto.event.param_objects.AdminEventsFilter;
 import ru.practicum.dto.event.param_objects.PublicEventsFilter;
+import ru.practicum.dto.location.PrivateEventsFilter;
 import ru.practicum.dto.stats.EndpointHit;
 import ru.practicum.dto.stats.ViewStats;
+import ru.practicum.dto.user.UserShortDto;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.UserServiceUnavailableException;
@@ -64,8 +67,9 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
     private final UserServiceClient userServiceClient;
-    private final RequestServiceClient requestServiceClient;
     private final StatsClient statsClient;
+    //доп функциональность
+    private static final double EARTH_RADIUS_METERS = 6371000.0;
 
     private Event getEventByIdOrThrow(Long eventId) {
         return eventRepository.findById(eventId)
@@ -537,5 +541,93 @@ public class EventServiceImpl implements EventService {
                         categoryNames.get(event.getCategoryId())
                 ))
                 .collect(Collectors.toList());
+    }
+
+    //методы дополнительной функциональности
+    @Override
+    public EventFullDto getEventWithDistance(Long eventId, Double lat, Double lon) {
+        Event event = getEventByIdOrThrow(eventId);
+        if (!event.getState().equals(EventState.PUBLISHED.name())) {
+            throw new NotFoundException("Событие не опубликовано");
+        }
+
+        Long views = getViewsFromStats(List.of(eventId)).getOrDefault(eventId, 0L);
+        String initiatorName = getUserName(event.getInitiatorId());
+        String categoryName = getCategoryName(event.getCategoryId());
+        EventFullDto dto = eventMapper.toFullDto(event, views, initiatorName, categoryName);
+
+        Double distance = calculateDistance(lat, lon, event.getLat(), event.getLon());
+
+        return new EventFullDto(
+                dto.annotation(), dto.category(), dto.confirmedRequests(), dto.createdOn(),
+                dto.description(), dto.eventDate(), dto.id(), dto.initiator(),
+                dto.location(), dto.paid(), dto.participantLimit(), dto.publishedOn(),
+                dto.requestModeration(), dto.state(), dto.title(), dto.views(),
+                distance
+        );
+    }
+
+    @Override
+    public List<EventShortDto> getUserEventsByCoordinates(Long userId, PrivateEventsFilter filter,
+                                                          Integer page, Integer size) {
+        log.info("Поиск событий рядом: userId={}, lat={}, lon={}, radius={}",
+                userId, filter.lat(), filter.lon(), filter.radiusMeters());
+
+        validateUser(userId);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        List<Object[]> results = eventRepository.findEventsWithinRadius(
+                filter.radiusMeters(),
+                filter.lat(),
+                filter.lon(),
+                pageable
+        );
+
+        if (results.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> eventIds = results.stream()
+                .map(row -> (Long) row[0])
+                .collect(Collectors.toList());
+        Map<Long, Long> viewsMap = getViewsFromStats(eventIds);
+
+        return results.stream()
+                .map(row -> new EventShortDto(
+                        (String) row[1],
+                        new CategoryDto((Long) row[2], getCategoryName((Long) row[2])),
+                        (Long) row[3],
+                        (LocalDateTime) row[4],
+                        (Long) row[0],
+                        new UserShortDto((Long) row[5], getUserName((Long) row[5])),
+                        (Boolean) row[6],
+                        (String) row[7],
+                        viewsMap.get((Long) row[0]),
+                        (Double) row[8]
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private Double calculateDistance(Double latUser, Double lonUser, Double latEvent, Double lonEvent) {
+        if (latEvent == null || lonEvent == null) {
+            return null;
+        }
+
+        double radUser = Math.toRadians(latUser);
+        double radEvent = Math.toRadians(latEvent);
+        double radTheta = Math.toRadians(lonUser - lonEvent);
+
+        double distance = Math.sin(radUser) * Math.sin(radEvent)
+                + Math.cos(radUser) * Math.cos(radEvent) * Math.cos(radTheta);
+
+        if (distance > 1) {
+            distance = 1;
+        }
+        if (distance < -1) {
+            distance = -1;
+        }
+
+        return Math.acos(distance) * EARTH_RADIUS_METERS;
     }
 }

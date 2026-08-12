@@ -50,6 +50,20 @@ public class EventServiceClientFallbackFactory implements FallbackFactory<EventS
                 log.error("Сервис событий недоступен для getEventsByIds: {}", eventIds, cause);
                 return List.of();
             }
+
+            @Override
+            public EventFullDto getEventWithDistance(Long eventId, Double lat, Double lon) {
+                log.error("Сервис событий недоступен для getEventWithDistance: eventId={}, lat={}, lon={}",
+                        eventId, lat, lon, cause);
+                throw new RuntimeException("Сервис событий временно недоступен");
+            }
+
+            @Override
+            public List<EventShortDto> getEventsNearby(Long userId, Double lat, Double lon, Double radiusMeters, Integer page, Integer size) {
+                log.error("Сервис событий недоступен для getEventsNearby: userId={}, page={}, size={}",
+                        userId, page, size, cause);
+                return List.of();
+            }
         };
     }
 }
