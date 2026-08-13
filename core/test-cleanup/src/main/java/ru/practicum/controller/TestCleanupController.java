@@ -55,48 +55,32 @@ public class TestCleanupController {
     private void cleanUserDb() throws SQLException {
         log.info("Очистка user-db...");
         try (Connection connection = userDataSource.getConnection()) {
-            log.debug("Подключение к user-db установлено");
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("cleanup-user.sql"));
             log.info("user-db успешно очищена");
-        } catch (Exception e) {
-            log.error("Ошибка при очистке user-db: {}", e.getMessage(), e);
-            throw e;
         }
     }
 
     private void cleanEventDb() throws SQLException {
         log.info("Очистка event-db...");
         try (Connection connection = eventDataSource.getConnection()) {
-            log.debug("Подключение к event-db установлено");
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("cleanup-event.sql"));
             log.info("event-db успешно очищена");
-        } catch (Exception e) {
-            log.error("Ошибка при очистке event-db: {}", e.getMessage(), e);
-            throw e;
         }
     }
 
     private void cleanRequestDb() throws SQLException {
         log.info("Очистка request-db...");
         try (Connection connection = requestDataSource.getConnection()) {
-            log.debug("Подключение к request-db установлено");
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("cleanup-request.sql"));
             log.info("request-db успешно очищена");
-        } catch (Exception e) {
-            log.error("Ошибка при очистке request-db: {}", e.getMessage(), e);
-            throw e;
         }
     }
 
     private void cleanStatsDb() throws SQLException {
         log.info("Очистка stats-db...");
         try (Connection connection = statsDataSource.getConnection()) {
-            log.debug("Подключение к stats-db установлено");
             connection.createStatement().execute("TRUNCATE TABLE endpoint_hits CASCADE");
             log.info("stats-db успешно очищена");
-        } catch (Exception e) {
-            log.error("Ошибка при очистке stats-db: {}", e.getMessage(), e);
-            throw e;
         }
     }
 }

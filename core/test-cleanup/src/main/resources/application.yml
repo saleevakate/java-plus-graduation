@@ -1,6 +1,9 @@
 spring:
   application:
     name: test-cleanup
+  cloud:
+    config:
+      enabled: false
 
   datasource:
     user:
@@ -8,34 +11,33 @@ spring:
       username: localAdmin
       password: localadmin
       driver-class-name: org.postgresql.Driver
-      maximum-pool-size: 1
 
     event:
       jdbc-url: jdbc:postgresql://event-db:5432/event-db
       username: localAdmin
       password: localadmin
       driver-class-name: org.postgresql.Driver
-      maximum-pool-size: 1
 
     request:
       jdbc-url: jdbc:postgresql://request-db:5432/request-db
       username: localAdmin
       password: localadmin
       driver-class-name: org.postgresql.Driver
-      maximum-pool-size: 1
 
     stats:
       jdbc-url: jdbc:postgresql://stats-db:5432/stats-db
       username: localAdmin
       password: localadmin
       driver-class-name: org.postgresql.Driver
-      maximum-pool-size: 1
 
 server:
   port: 9099
 
-logging:
-  level:
-    ru.practicum: INFO
-    com.zaxxer.hikari: INFO
-    org.springframework.jdbc: DEBUG
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
