@@ -15,12 +15,12 @@
         <dependency>
             <groupId>ru.practicum</groupId>
             <artifactId>common-api</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>ru.practicum</groupId>
             <artifactId>common-exception</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>

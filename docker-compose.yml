@@ -68,9 +68,63 @@ services:
       - POSTGRES_PASSWORD=localadmin
       - TZ=UTC
     volumes:
-      - ./stats-service/stats-server/src/main/resources:/docker-entrypoint-initdb.d
+      - ./db/stats-schema.sql:/docker-entrypoint-initdb.d/stats-schema.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U localAdmin -d stats-db" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  user-db:
+    image: postgres:16.1
+    container_name: user-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=user-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/user-schema.sql:/docker-entrypoint-initdb.d/user-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d user-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  event-db:
+    image: postgres:16.1
+    container_name: event-db
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_DB=event-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/event-schema.sql:/docker-entrypoint-initdb.d/event-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d event-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  request-db:
+    image: postgres:16.1
+    container_name: request-db
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=request-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/request-schema.sql:/docker-entrypoint-initdb.d/request-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d request-db"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -93,24 +147,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  ewm-db:
-    image: postgres:16.1
-    container_name: ewm-db
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=ewm-db
-      - POSTGRES_USER=localAdmin
-      - POSTGRES_PASSWORD=localadmin
-      - TZ=UTC
-    volumes:
-      - ./db:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U localAdmin -d ewm-db" ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   user-service:
     image: eclipse-temurin:21-jdk-alpine
     container_name: user-service
@@ -123,25 +159,7 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
-      ewm-db:
-        condition: service_healthy
-    environment:
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
-      - TZ=UTC
-
-  request-service:
-    image: eclipse-temurin:21-jdk-alpine
-    container_name: request-service
-    working_dir: /app
-    volumes:
-      - ./request-service/target:/app
-    command: java -jar request-service-0.0.1-SNAPSHOT.jar
-    depends_on:
-      discovery-server:
-        condition: service_healthy
-      config-server:
-        condition: service_healthy
-      ewm-db:
+      user-db:
         condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
@@ -159,10 +177,28 @@ services:
         condition: service_healthy
       config-server:
         condition: service_healthy
-      ewm-db:
+      event-db:
         condition: service_healthy
       stats-server:
         condition: service_started
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  request-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: request-service
+    working_dir: /app
+    volumes:
+      - ./request-service/target:/app
+    command: java -jar request-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      request-db:
+        condition: service_healthy
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
@@ -193,12 +229,16 @@ services:
     ports:
       - "9099:9099"
     depends_on:
-      discovery-server:
+      user-db:
         condition: service_healthy
-      config-server:
+      event-db:
         condition: service_healthy
-      ewm-db:
+      request-db:
+        condition: service_healthy
+      stats-db:
         condition: service_healthy
     environment:
       - TZ=UTC
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+    restart: "no"
+    networks:
+      - explore-with-me-network

@@ -3,14 +3,14 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://ewm-db:5432/ewm-db
+    url: jdbc:postgresql://event-db:5432/event-db
     username: localAdmin
     password: localadmin
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: none
+      ddl-auto: create-drop
     show-sql: true
 
 logging:

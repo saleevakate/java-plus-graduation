@@ -1,14 +1,35 @@
 spring:
   application:
     name: test-cleanup
+
   datasource:
-    url: jdbc:postgresql://ewm-db:5432/ewm-db
-    username: localAdmin
-    password: localadmin
-    driver-class-name: org.postgresql.Driver
-  cloud:
-    config:
-      enabled: false
+    user:
+      jdbc-url: jdbc:postgresql://user-db:5432/user-db
+      username: localAdmin
+      password: localadmin
+      driver-class-name: org.postgresql.Driver
+      maximum-pool-size: 1
+
+    event:
+      jdbc-url: jdbc:postgresql://event-db:5432/event-db
+      username: localAdmin
+      password: localadmin
+      driver-class-name: org.postgresql.Driver
+      maximum-pool-size: 1
+
+    request:
+      jdbc-url: jdbc:postgresql://request-db:5432/request-db
+      username: localAdmin
+      password: localadmin
+      driver-class-name: org.postgresql.Driver
+      maximum-pool-size: 1
+
+    stats:
+      jdbc-url: jdbc:postgresql://stats-db:5432/stats-db
+      username: localAdmin
+      password: localadmin
+      driver-class-name: org.postgresql.Driver
+      maximum-pool-size: 1
 
 server:
   port: 9099
@@ -16,12 +37,5 @@ server:
 logging:
   level:
     ru.practicum: INFO
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://discovery-server:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-  instance:
-    prefer-ip-address: true
+    com.zaxxer.hikari: INFO
+    org.springframework.jdbc: DEBUG

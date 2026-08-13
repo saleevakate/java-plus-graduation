@@ -1,9 +1,3 @@
-CREATE TABLE IF NOT EXISTS users (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE
-);
-
 CREATE TABLE IF NOT EXISTS categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE
@@ -15,7 +9,7 @@ CREATE TABLE IF NOT EXISTS events (
     description TEXT NOT NULL,
     annotation TEXT NOT NULL,
     category_id BIGINT REFERENCES categories(id),
-    initiator_id BIGINT REFERENCES users(id),
+    initiator_id BIGINT,
     event_date TIMESTAMP,
     created_on TIMESTAMP,
     published_on TIMESTAMP,
@@ -38,12 +32,4 @@ CREATE TABLE IF NOT EXISTS compilation_events (
     compilation_id BIGINT REFERENCES compilations(id) ON DELETE CASCADE,
     event_id BIGINT REFERENCES events(id) ON DELETE CASCADE,
     PRIMARY KEY (compilation_id, event_id)
-);
-
-CREATE TABLE IF NOT EXISTS requests (
-    id BIGSERIAL PRIMARY KEY,
-    event_id BIGINT REFERENCES events(id),
-    requester_id BIGINT REFERENCES users(id),
-    created TIMESTAMP,
-    status VARCHAR(50)
 );
