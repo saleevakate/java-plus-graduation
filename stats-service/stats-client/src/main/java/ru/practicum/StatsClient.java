@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
+import ru.practicum.dto.stats.EndpointHit;
+import ru.practicum.dto.stats.ViewStats;
 import ru.practicum.exception.ValidationDataException;
 
 import java.net.URI;
@@ -103,8 +105,7 @@ public class StatsClient {
         var response = restClient.get()
                 .uri(uri)
                 .retrieve()
-                .toEntity(new ParameterizedTypeReference<List<ViewStats>>() {
-                });
+                .toEntity(new ParameterizedTypeReference<List<ViewStats>>() {});
 
         if (response.getStatusCode().value() != HttpStatus.OK.value()) {
             log.error("Ошибка получения статистики. Ожидался 200, получен {}", response.getStatusCode());

@@ -1,0 +1,30 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:postgresql://event-db:5432/event-db
+    username: localAdmin
+    password: localadmin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.cloud: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+stats:
+  server:
+    url: http://stats-server:9090

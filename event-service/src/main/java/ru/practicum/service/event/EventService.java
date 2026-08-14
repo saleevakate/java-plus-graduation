@@ -1,0 +1,47 @@
+package ru.practicum.service.event;
+
+import jakarta.servlet.http.HttpServletRequest;
+import ru.practicum.dto.event.*;
+import ru.practicum.dto.event.param_objects.AdminEventsFilter;
+import ru.practicum.dto.event.param_objects.PublicEventsFilter;
+import ru.practicum.dto.location.PrivateEventsFilter;
+
+import java.util.List;
+import java.util.Map;
+
+public interface EventService {
+
+    EventFullDto getEventById(Long eventId, HttpServletRequest request);
+
+    List<EventShortDto> getUserEvents(Long userId, int from, int size);
+
+    EventFullDto createEvent(Long userId, NewEventDto newEventDto);
+
+    EventFullDto getUserEvent(Long userId, Long eventId);
+
+    EventFullDto updateUserEvent(Long userId, Long eventId, UpdateEventUserRequest updateRequest);
+
+    List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, HttpServletRequest request);
+
+    List<EventFullDto> getAdminEvents(AdminEventsFilter filter);
+
+    EventFullDto updateAdminEvent(Long eventId, UpdateEventAdminRequest request);
+
+    Map<Long, Long> getViews(List<Long> eventIds);
+
+    boolean eventExists(Long eventId);
+
+    boolean isEventOwner(Long userId, Long eventId);
+
+    boolean isEventPublished(Long eventId);
+
+    int getParticipantLimit(Long eventId);
+
+    List<EventShortDto> getEventsByIds(List<Long> eventIds);
+
+    //методы дополнительной функциональности
+    EventFullDto getEventWithDistance(Long eventId, Double lat, Double lon);
+
+    List<EventShortDto> getUserEventsByCoordinates(Long userId, PrivateEventsFilter filter,
+                                                   Integer page, Integer size);
+}

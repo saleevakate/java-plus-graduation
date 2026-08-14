@@ -13,6 +13,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>main-service</module>
+        <module>api-client</module>
+        <module>common-api</module>
+        <module>common-exception</module>
+        <module>test-cleanup</module>
     </modules>
 </project>

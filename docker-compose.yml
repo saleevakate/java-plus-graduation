@@ -11,7 +11,7 @@ services:
     environment:
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8761/actuator/health"]
+      test: [ "CMD", "wget", "--spider", "http://localhost:8761/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,7 +34,7 @@ services:
       - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/config-repo
       - TZ=UTC
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:8888/actuator/health"]
+      test: [ "CMD", "wget", "--spider", "http://localhost:8888/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,24 +57,6 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  ewm-db:
-    image: postgres:16.1
-    container_name: ewm-db
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=ewm-db
-      - POSTGRES_USER=localAdmin
-      - POSTGRES_PASSWORD=localadmin
-      - TZ=UTC
-    volumes:
-      - ./core/main-service/src/main/resources:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U localAdmin -d ewm-db"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -86,9 +68,63 @@ services:
       - POSTGRES_PASSWORD=localadmin
       - TZ=UTC
     volumes:
-      - ./stats-service/stats-server/src/main/resources:/docker-entrypoint-initdb.d
+      - ./db/stats-schema.sql:/docker-entrypoint-initdb.d/stats-schema.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U localAdmin -d stats-db"]
+      test: [ "CMD-SHELL", "pg_isready -U localAdmin -d stats-db" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  user-db:
+    image: postgres:16.1
+    container_name: user-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=user-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/user-schema.sql:/docker-entrypoint-initdb.d/user-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d user-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  event-db:
+    image: postgres:16.1
+    container_name: event-db
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_DB=event-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/event-schema.sql:/docker-entrypoint-initdb.d/event-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d event-db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  request-db:
+    image: postgres:16.1
+    container_name: request-db
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=request-db
+      - POSTGRES_USER=localAdmin
+      - POSTGRES_PASSWORD=localadmin
+      - TZ=UTC
+    volumes:
+      - ./db/request-schema.sql:/docker-entrypoint-initdb.d/request-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U localAdmin -d request-db"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -111,22 +147,98 @@ services:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
 
-  ewm-service:
+  user-service:
     image: eclipse-temurin:21-jdk-alpine
-    container_name: ewm-service
+    container_name: user-service
     working_dir: /app
     volumes:
-      - ./core/main-service/target:/app
-    command: java -jar main-service-0.0.1-SNAPSHOT.jar
+      - ./user-service/target:/app
+    command: java -jar user-service-0.0.1-SNAPSHOT.jar
     depends_on:
       discovery-server:
         condition: service_healthy
       config-server:
         condition: service_healthy
-      ewm-db:
+      user-db:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  event-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: event-service
+    working_dir: /app
+    volumes:
+      - ./event-service/target:/app
+    command: java -jar event-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      event-db:
         condition: service_healthy
       stats-server:
         condition: service_started
     environment:
       - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
       - TZ=UTC
+
+  request-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: request-service
+    working_dir: /app
+    volumes:
+      - ./request-service/target:/app
+    command: java -jar request-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      request-db:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  location-service:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: location-service
+    working_dir: /app
+    volumes:
+      - ./location-service/target:/app
+    command: java -jar location-service-0.0.1-SNAPSHOT.jar
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - TZ=UTC
+
+  test-cleanup:
+    image: eclipse-temurin:21-jdk-alpine
+    container_name: test-cleanup
+    working_dir: /app
+    volumes:
+      - ./core/test-cleanup/target:/app
+    command: java -jar test-cleanup-0.0.1-SNAPSHOT.jar
+    ports:
+      - "9099:9099"
+    depends_on:
+      user-db:
+        condition: service_healthy
+      event-db:
+        condition: service_healthy
+      request-db:
+        condition: service_healthy
+      stats-db:
+        condition: service_healthy
+    environment:
+      - TZ=UTC
+    restart: "no"
+    networks:
+      - explore-with-me-network

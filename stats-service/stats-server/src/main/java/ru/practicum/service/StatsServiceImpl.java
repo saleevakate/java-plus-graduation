@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import ru.practicum.EndpointHit;
-import ru.practicum.ViewStats;
+import ru.practicum.dto.stats.EndpointHit;
+import ru.practicum.dto.stats.ViewStats;
 import ru.practicum.exception.ValidationDataException;
 import ru.practicum.mapper.StatsMapper;
 import ru.practicum.model.EndpointHitEntity;
@@ -65,7 +65,7 @@ public class StatsServiceImpl implements StatsService {
 
     private List<ViewStats> mapToViewStats(List<Object[]> results) {
         List<ViewStats> response = results.stream()
-                .map(obj -> new ViewStats((String) obj[0], (String) obj[1], (long)obj[2]))
+                .map(obj -> new ViewStats((String) obj[0], (String) obj[1], (long) obj[2]))
                 .toList();
         log.info("ViewStats успешно получены");
 
