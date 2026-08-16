@@ -5,18 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>ru.practicum</groupId>
-        <artifactId>explore-with-me</artifactId>
+        <artifactId>core</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>core</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>avro-schemas</artifactId>
 
-    <modules>
-        <module>api-client</module>
-        <module>common-api</module>
-        <module>common-exception</module>
-        <module>test-cleanup</module>
-        <module>avro-schemas</module>
-    </modules>
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
 </project>
