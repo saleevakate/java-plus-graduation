@@ -15,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.AnalyzerClient;
+import ru.practicum.CollectorClient;
 import ru.practicum.StatsClient;
 import ru.practicum.client.user.UserServiceClient;
 import ru.practicum.dto.category.CategoryDto;
@@ -25,6 +27,8 @@ import ru.practicum.dto.location.PrivateEventsFilter;
 import ru.practicum.dto.stats.EndpointHit;
 import ru.practicum.dto.stats.ViewStats;
 import ru.practicum.dto.user.UserShortDto;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import ru.practicum.ewm.stats.proto.RecommendedEventProto;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
 import ru.practicum.exception.UserServiceUnavailableException;
@@ -68,7 +72,8 @@ public class EventServiceImpl implements EventService {
     private final EventMapper eventMapper;
     private final UserServiceClient userServiceClient;
     private final StatsClient statsClient;
-    //доп функциональность
+    private final CollectorClient collectorClient;
+    private final AnalyzerClient analyzerClient;
     private static final double EARTH_RADIUS_METERS = 6371000.0;
 
     private Event getEventByIdOrThrow(Long eventId) {
@@ -223,22 +228,62 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private Double getEventRating(Long eventId) {
+        try {
+            List<RecommendedEventProto> interactions = analyzerClient.getInteractionsCount(List.of(eventId));
+            if (interactions.isEmpty()) {
+                return 0.0;
+            }
+            return interactions.get(0).getScore();
+        } catch (Exception e) {
+            log.error("Ошибка получения рейтинга для eventId={}", eventId, e);
+            return 0.0;
+        }
+    }
+
+    private Map<Long, Double> getEventsRatings(List<Long> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            List<RecommendedEventProto> interactions = analyzerClient.getInteractionsCount(eventIds);
+            return interactions.stream()
+                    .collect(Collectors.toMap(
+                            RecommendedEventProto::getEventId,
+                            RecommendedEventProto::getScore
+                    ));
+        } catch (Exception e) {
+            log.error("Ошибка получения рейтингов для событий", e);
+            return new HashMap<>();
+        }
+    }
+
     @Override
     public EventFullDto getEventById(Long eventId, HttpServletRequest request) {
         log.info("Получение события по id: {}", eventId);
 
-        saveHit(request);
+        String userIdHeader = request.getHeader("X-EWM-USER-ID");
+        if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                Long userId = Long.parseLong(userIdHeader);
+                collectorClient.sendUserAction(userId, eventId, ActionTypeProto.ACTION_VIEW);
+                log.debug("Отправлен VIEW для userId={}, eventId={}", userId, eventId);
+            } catch (NumberFormatException e) {
+                log.warn("Неверный формат X-EWM-USER-ID: {}", userIdHeader);
+            }
+        }
 
         Event event = getEventByIdOrThrow(eventId);
         if (!event.getState().equals(EventState.PUBLISHED.name())) {
             throw new NotFoundException("Событие не опубликовано");
         }
 
-        Long views = getViewsFromStats(List.of(eventId)).getOrDefault(eventId, 0L);
+        Double rating = getEventRating(eventId);
+
         String initiatorName = getUserName(event.getInitiatorId());
         String categoryName = getCategoryName(event.getCategoryId());
 
-        return eventMapper.toFullDto(event, views, initiatorName, categoryName);
+        return eventMapper.toFullDto(event, rating, initiatorName, categoryName);
     }
 
     @Override
@@ -249,14 +294,14 @@ public class EventServiceImpl implements EventService {
         List<Event> events = eventRepository.findAllByInitiatorId(userId, PageRequest.of(from / size, size))
                 .getContent();
 
-        Map<Long, Long> viewsMap = getViewsFromStats(events.stream().map(Event::getId).toList());
+        Map<Long, Double> ratingsMap = getEventsRatings(events.stream().map(Event::getId).toList());
         Map<Long, String> userNames = getUserNames(events.stream().map(Event::getInitiatorId).toList());
         Map<Long, String> categoryNames = getCategoryNames(events.stream().map(Event::getCategoryId).toList());
 
         return events.stream()
                 .map(event -> eventMapper.toShortDto(
                         event,
-                        viewsMap.getOrDefault(event.getId(), 0L),
+                        ratingsMap.getOrDefault(event.getId(), 0.0),
                         userNames.get(event.getInitiatorId()),
                         categoryNames.get(event.getCategoryId())
                 ))
@@ -299,7 +344,7 @@ public class EventServiceImpl implements EventService {
         String initiatorName = getUserName(userId);
         String categoryName = getCategoryName(saved.getCategoryId());
 
-        return eventMapper.toFullDto(saved, 0L, initiatorName, categoryName);
+        return eventMapper.toFullDto(saved, 0.0, initiatorName, categoryName);
     }
 
     @Override
@@ -308,11 +353,11 @@ public class EventServiceImpl implements EventService {
         validateUser(userId);
         Event event = getOwnedEventOrThrow(userId, eventId);
 
-        Long views = getViewsFromStats(List.of(eventId)).getOrDefault(eventId, 0L);
+        Double rating = getEventRating(eventId);
         String initiatorName = getUserName(event.getInitiatorId());
         String categoryName = getCategoryName(event.getCategoryId());
 
-        return eventMapper.toFullDto(event, views, initiatorName, categoryName);
+        return eventMapper.toFullDto(event, rating, initiatorName, categoryName);
     }
 
     @Override
@@ -347,18 +392,16 @@ public class EventServiceImpl implements EventService {
         }
 
         Event saved = eventRepository.save(event);
-        Long views = getViewsFromStats(List.of(saved.getId())).getOrDefault(saved.getId(), 0L);
+        Double rating = getEventRating(saved.getId());
         String initiatorName = getUserName(saved.getInitiatorId());
         String categoryName = getCategoryName(saved.getCategoryId());
 
-        return eventMapper.toFullDto(saved, views, initiatorName, categoryName);
+        return eventMapper.toFullDto(saved, rating, initiatorName, categoryName);
     }
 
     @Override
     public List<EventShortDto> getPublishedEvents(PublicEventsFilter filter, HttpServletRequest request) {
         log.info("Поиск опубликованных событий с фильтром: {}", filter);
-
-        saveHit(request);
 
         Predicate predicate = predicateFromFilter(filter);
 
@@ -369,23 +412,19 @@ public class EventServiceImpl implements EventService {
 
         List<Long> eventIds = events.stream().map(Event::getId).toList();
 
-        for (Long eventId : eventIds) {
-            saveHit(request, "/events/" + eventId);
-        }
-
-        Map<Long, Long> views = getViewsFromStats(eventIds);
+        Map<Long, Double> ratings = getEventsRatings(eventIds);
         Map<Long, String> userNames = getUserNames(events.stream().map(Event::getInitiatorId).toList());
         Map<Long, String> categoryNames = getCategoryNames(events.stream().map(Event::getCategoryId).toList());
 
         return events.stream()
                 .map(event -> eventMapper.toShortDto(
                         event,
-                        views.getOrDefault(event.getId(), 0L),
+                        ratings.getOrDefault(event.getId(), 0.0),
                         userNames.get(event.getInitiatorId()),
                         categoryNames.get(event.getCategoryId())
                 ))
                 .sorted(sortByViews(filter)
-                        ? Comparator.comparingLong(EventShortDto::views).reversed()
+                        ? Comparator.comparingDouble(EventShortDto::rating).reversed()
                         : Comparator.comparing(EventShortDto::eventDate))
                 .skip(filter.from())
                 .limit(filter.size())
@@ -424,14 +463,14 @@ public class EventServiceImpl implements EventService {
                 .limit(filter.size())
                 .fetch();
 
-        Map<Long, Long> views = getViewsFromStats(events.stream().map(Event::getId).toList());
+        Map<Long, Double> ratings = getEventsRatings(events.stream().map(Event::getId).toList());
         Map<Long, String> userNames = getUserNames(events.stream().map(Event::getInitiatorId).toList());
         Map<Long, String> categoryNames = getCategoryNames(events.stream().map(Event::getCategoryId).toList());
 
         return events.stream()
                 .map(e -> eventMapper.toFullDto(
                         e,
-                        views.getOrDefault(e.getId(), 0L),
+                        ratings.getOrDefault(e.getId(), 0.0),
                         userNames.get(e.getInitiatorId()),
                         categoryNames.get(e.getCategoryId())
                 ))
@@ -473,11 +512,11 @@ public class EventServiceImpl implements EventService {
         }
 
         Event saved = eventRepository.save(event);
-        Long views = getViewsFromStats(List.of(saved.getId())).getOrDefault(saved.getId(), 0L);
+        Double rating = getEventRating(saved.getId());
         String initiatorName = getUserName(saved.getInitiatorId());
         String categoryName = getCategoryName(saved.getCategoryId());
 
-        return eventMapper.toFullDto(saved, views, initiatorName, categoryName);
+        return eventMapper.toFullDto(saved, rating, initiatorName, categoryName);
     }
 
     @Override
@@ -524,7 +563,7 @@ public class EventServiceImpl implements EventService {
             return List.of();
         }
 
-        Map<Long, Long> viewsMap = getViewsFromStats(eventIds);
+        Map<Long, Double> ratingsMap = getEventsRatings(eventIds);
         Map<Long, String> userNames = getUserNames(events.stream()
                 .map(Event::getInitiatorId)
                 .collect(Collectors.toList()));
@@ -536,14 +575,13 @@ public class EventServiceImpl implements EventService {
         return events.stream()
                 .map(event -> eventMapper.toShortDto(
                         event,
-                        viewsMap.getOrDefault(event.getId(), 0L),
+                        ratingsMap.getOrDefault(event.getId(), 0.0),
                         userNames.get(event.getInitiatorId()),
                         categoryNames.get(event.getCategoryId())
                 ))
                 .collect(Collectors.toList());
     }
 
-    //методы дополнительной функциональности
     @Override
     public EventFullDto getEventWithDistance(Long eventId, Double lat, Double lon) {
         Event event = getEventByIdOrThrow(eventId);
@@ -551,10 +589,10 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие не опубликовано");
         }
 
-        Long views = getViewsFromStats(List.of(eventId)).getOrDefault(eventId, 0L);
+        Double rating = getEventRating(eventId);
         String initiatorName = getUserName(event.getInitiatorId());
         String categoryName = getCategoryName(event.getCategoryId());
-        EventFullDto dto = eventMapper.toFullDto(event, views, initiatorName, categoryName);
+        EventFullDto dto = eventMapper.toFullDto(event, rating, initiatorName, categoryName);
 
         Double distance = calculateDistance(lat, lon, event.getLat(), event.getLon());
 
@@ -562,7 +600,7 @@ public class EventServiceImpl implements EventService {
                 dto.annotation(), dto.category(), dto.confirmedRequests(), dto.createdOn(),
                 dto.description(), dto.eventDate(), dto.id(), dto.initiator(),
                 dto.location(), dto.paid(), dto.participantLimit(), dto.publishedOn(),
-                dto.requestModeration(), dto.state(), dto.title(), dto.views(),
+                dto.requestModeration(), dto.state(), dto.title(), dto.rating(),
                 distance
         );
     }
@@ -591,7 +629,7 @@ public class EventServiceImpl implements EventService {
         List<Long> eventIds = results.stream()
                 .map(row -> (Long) row[0])
                 .collect(Collectors.toList());
-        Map<Long, Long> viewsMap = getViewsFromStats(eventIds);
+        Map<Long, Double> ratingsMap = getEventsRatings(eventIds);
 
         return results.stream()
                 .map(row -> new EventShortDto(
@@ -603,10 +641,18 @@ public class EventServiceImpl implements EventService {
                         new UserShortDto((Long) row[5], getUserName((Long) row[5])),
                         (Boolean) row[6],
                         (String) row[7],
-                        viewsMap.get((Long) row[0]),
+                        ratingsMap.get((Long) row[0]),
                         (Double) row[8]
                 ))
                 .collect(Collectors.toList());
+    }
+    public boolean isEventVisitedByUser(Long userId, Long eventId) {
+        try {
+            return eventRepository.existsByEventIdAndRequesterId(eventId, userId);
+        } catch (Exception e) {
+            log.error("Ошибка проверки посещения события: userId={}, eventId={}", userId, eventId, e);
+            return false;
+        }
     }
 
     private Double calculateDistance(Double latUser, Double lonUser, Double latEvent, Double lonEvent) {

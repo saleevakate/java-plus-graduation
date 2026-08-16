@@ -28,3 +28,14 @@
 
 /users/{userId}/events/nearby метод getUserEventsByCoordinates ищет события рядом в определенном радиусе, согласно переданным координатам пользователя.
 Не подключена к бд
+
+
+Диплом часть 3
+Новая функциональность -
+
+Новые сервисы рекомендательной системы :
+1. Collector - принимает сообщения из бизнес-сервисов, отправляет данные в топик stats.user-actions.v1
+2. Aggregator - читает топик stats.user-actions.v1, считает сходство мероприятий, отправляет данные в топик stats.events-similarity.v1
+3. Analyzer - читает топики stats.user-actions.v1 и stats.events-similarity.v1, пишет данные в бд и предоставляет информацию о рекомендациях
+4. core/serialization/avro-schemas - схемы в формате avro
+                     /proto-schemas - схемы в формате protobuf
