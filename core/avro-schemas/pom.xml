@@ -26,6 +26,7 @@
                 <version>${avro.version}</version>
                 <executions>
                     <execution>
+                        <id>schemas</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>schema</goal>
@@ -33,6 +34,9 @@
                         <configuration>
                             <sourceDirectory>src/main/resources/avro</sourceDirectory>
                             <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
+                            <imports>
+                                <import>src/main/resources/avro/ActionTypeAvro.avsc</import>
+                            </imports>
                         </configuration>
                     </execution>
                 </executions>
