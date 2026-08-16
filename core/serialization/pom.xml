@@ -5,18 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>ru.practicum</groupId>
-        <artifactId>explore-with-me</artifactId>
+        <artifactId>core</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>core</artifactId>
+    <artifactId>serialization</artifactId>
     <packaging>pom</packaging>
-
     <modules>
-        <module>api-client</module>
-        <module>common-api</module>
-        <module>common-exception</module>
-        <module>test-cleanup</module>
-        <module>serialization</module>
+        <module>avro-schemas</module>
+        <module>proto-schemas</module>
     </modules>
+
 </project>
