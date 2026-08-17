@@ -28,8 +28,4 @@ public class AvroSerializer<T extends SpecificRecordBase> implements Serializer<
             throw new RuntimeException("Ошибка сериализации Avro-данных в топик " + topic, e);
         }
     }
-
-    @Override
-    public void close() {
-    }
 }

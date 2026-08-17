@@ -32,8 +32,4 @@ public abstract class BaseAvroDeserializer<T extends SpecificRecordBase> impleme
             throw new RuntimeException("Ошибка десериализации из топика " + topic, e);
         }
     }
-
-    @Override
-    public void close() {
-    }
 }
