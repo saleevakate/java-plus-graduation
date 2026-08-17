@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.CollectorClient;
 import ru.practicum.client.event.EventServiceClient;
 import ru.practicum.client.user.UserServiceClient;
 import ru.practicum.dto.participation.ParticipationRequestDto;
 import ru.practicum.dto.participation.ParticipationStatus;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.EventServiceUnavailableException;
 import ru.practicum.exception.NotFoundException;
@@ -28,6 +30,7 @@ public class RequestServiceImpl implements RequestService {
     private final RequestMapper requestMapper;
     private final UserServiceClient userServiceClient;
     private final EventServiceClient eventServiceClient;
+    private final CollectorClient collectorClient;
 
     private boolean userExists(Long userId) {
         try {
@@ -124,6 +127,8 @@ public class RequestServiceImpl implements RequestService {
 
         Request saved = requestRepository.save(request);
         log.info("Заявка создана с id={}", saved.getId());
+
+        collectorClient.sendUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
 
         return requestMapper.toDto(saved);
     }

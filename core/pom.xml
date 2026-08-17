@@ -17,5 +17,6 @@
         <module>common-api</module>
         <module>common-exception</module>
         <module>test-cleanup</module>
+        <module>serialization</module>
     </modules>
 </project>

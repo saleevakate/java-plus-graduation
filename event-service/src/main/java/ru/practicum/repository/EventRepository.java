@@ -40,4 +40,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, QuerydslPre
             @Param("lon") Double lon,
             Pageable pageable
     );
+
+    @Query(value = "SELECT COUNT(*) > 0 FROM requests WHERE event_id = :eventId AND requester_id = :userId", nativeQuery = true)
+    boolean existsByEventIdAndRequesterId(@Param("eventId") Long eventId, @Param("userId") Long userId);
+
 }

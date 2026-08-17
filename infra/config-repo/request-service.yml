@@ -24,3 +24,11 @@ management:
     web:
       exposure:
         include: health,info
+
+grpc:
+  client:
+    collector:
+      address: 'static://collector:9090'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext

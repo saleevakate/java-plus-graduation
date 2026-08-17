@@ -1,0 +1,48 @@
+server:
+  port: 0
+
+grpc:
+  server:
+    port: 0
+
+spring:
+  datasource:
+    url: jdbc:postgresql://analyzer-db:5432/analyzer-db
+    username: localAdmin
+    password: localadmin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
+  kafka:
+    bootstrap-servers: kafka:29092
+    consumer:
+      group-id: analyzer-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.kafka: INFO

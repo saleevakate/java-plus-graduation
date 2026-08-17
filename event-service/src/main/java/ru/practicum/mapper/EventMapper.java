@@ -36,11 +36,11 @@ public interface EventMapper {
     @Mapping(target = "location", expression = "java(toLocation(event))")
     @Mapping(target = "initiator", expression = "java(toUserShortDto(event, initiatorName))")
     @Mapping(target = "category", expression = "java(toCategoryDto(event, categoryName))")
-    EventFullDto toFullDto(Event event, Long views, String initiatorName, String categoryName);
+    EventFullDto toFullDto(Event event, Double rating, String initiatorName, String categoryName);
 
     @Mapping(target = "initiator", expression = "java(toUserShortDto(event, initiatorName))")
     @Mapping(target = "category", expression = "java(toCategoryDto(event, categoryName))")
-    EventShortDto toShortDto(Event event, Long views, String initiatorName, String categoryName);
+    EventShortDto toShortDto(Event event, Double rating, String initiatorName, String categoryName);
 
     default Location toLocation(Event event) {
         if (event.getLat() == null || event.getLon() == null) {
